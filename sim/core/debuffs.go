@@ -718,7 +718,7 @@ func ExposeArmorAura(target *Unit, improvedEA int32) *Aura {
 }
 
 func CurseOfRecklessnessAura(target *Unit) *Aura {
-	arpen := float64(640)
+	arpen := float64(505)
 	ap := float64(90)
 
 	aura := target.GetOrRegisterAura(Aura{

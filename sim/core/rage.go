@@ -7,31 +7,31 @@ import (
 	"github.com/wowsims/classic/sim/core/proto"
 )
 
-const MaxRage = 100.0
+const DefaultMaxRage = 100.0
+const MaxRage = DefaultMaxRage
 const ThreatPerRageGained = 5
 
-// Forever white-hit rage: flat per swing, scaled by listed weapon speed.
-// 1H ≈ 3.5 rage per second of speed, 2H ≈ 4.5, OH is half of 1H.
 const (
 	ForeverOneHandRagePerSecond = 3.5
 	ForeverTwoHandRagePerSecond = 4.5
 	ForeverOffHandRageFactor    = 0.5
 )
 
-// OnRageChange is called any time rage is increased.
 type OnRageChange func(aura *Aura, sim *Simulation, metrics *ResourceMetrics)
 
 type rageBar struct {
 	unit *Unit
 
-	damageDealtMultiplier float64 // Multiplier for rage generation from damage dealt
-	damageTakenMultiplier float64 // Multiplier for rage generation from damage taken
+	damageDealtMultiplier  float64
+	damageTakenMultiplier  float64
+	offHandDealtMultiplier float64
 
 	flatDamageDealtBonusRage float64
 	flatDamageTakenBonusRage float64
 
 	startingRage float64
 	currentRage  float64
+	maxRage      float64
 
 	RageRefundMetrics *ResourceMetrics
 }
@@ -44,15 +44,12 @@ type RageBarOptions struct {
 
 func GetRageConversion(attacker_level int32) float64 {
 	if attacker_level == 25 {
-		return 82.25 // Tested
+		return 82.25
 	} else if attacker_level == 40 {
-		return 140.5 // Tested
+		return 140.5
 	} else if attacker_level < 45 {
-		// Poor fit, but better then current formula below 45
 		return 0.0215*float64(attacker_level^2) + 2.66*float64(attacker_level) + 0.89
 	} else {
-		// Rage conversion is adjusted according to target stats (https://web.archive.org/web/20201118213002/https://blue.mmo-champion.com/topic/18325-the-new-rage-formula-by-kalgan/)\
-		// So this is probably only the base value formula and will be slightly wrong for most target
 		return 0.0091107836*float64(attacker_level^2) + 3.225598133*float64(attacker_level) + 4.2652911
 	}
 }
@@ -61,7 +58,6 @@ func foreverWhiteHitRage(weapon *Weapon) float64 {
 	if weapon == nil || weapon.SwingSpeed == 0 {
 		return 0
 	}
-	// newWeaponFromItem sets NormalizedSwingSpeed to 3.3 for two-handers.
 	if weapon.NormalizedSwingSpeed == 3.3 {
 		return ForeverTwoHandRagePerSecond * weapon.SwingSpeed
 	}
@@ -76,8 +72,6 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 		Label:    "RageBar",
 		Duration: NeverExpires,
 		OnInit: func(aura *Aura, sim *Simulation) {
-			// Initialize resource metrics for rage gain for auto attacks here to make sure tag is correct.
-			// Extra attacks change the tag from 1 to 3 for mh hits.
 			mhSpell := unit.AutoAttacks.MHAuto()
 			if mhSpell != nil {
 				mhSpell.ResourceMetrics = unit.NewRageMetrics(mhSpell.ActionID)
@@ -91,10 +85,25 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
+			if unit.GetCurrentPowerBar() != RageBar {
+				return
+			}
+			if result.Outcome.Matches(OutcomeMiss) {
+				return
+			}
+			if spell.ProcMask != ProcMaskMeleeMHAuto && spell.ProcMask != ProcMaskMeleeOHAuto {
+				return
+			}
+			if spell.Flags.Matches(SpellFlagPassiveSpell) {
+				return
+			}
+			switch spell.ActionID.SpellID {
+			case 12721, 12834, 12849, 12867:
+				return
+			}
 			if result.Outcome.Matches(OutcomeDodge | OutcomeParry) {
 				return
 			}
-
 			var generatedRage float64
 			if spell.ProcMask == ProcMaskMeleeOHAuto {
 				generatedRage = foreverWhiteHitRage(unit.AutoAttacks.OH()) * ForeverOffHandRageFactor
@@ -103,6 +112,9 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 			}
 
 			generatedRage *= unit.rageBar.damageDealtMultiplier
+			if spell.ProcMask == ProcMaskMeleeOHAuto {
+				generatedRage *= unit.rageBar.offHandDealtMultiplier
+			}
 			generatedRage += unit.rageBar.flatDamageDealtBonusRage
 
 			var metrics *ResourceMetrics
@@ -114,6 +126,7 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 				spell.ResourceMetrics = unit.NewRageMetrics(spell.ActionID)
 				metrics = spell.ResourceMetrics
 			}
+
 			unit.AddRage(sim, generatedRage, metrics)
 		},
 		OnSpellHitTaken: func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
@@ -128,17 +141,18 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 		},
 	})
 
-	// Not a real spell, just holds metrics from rage gain threat.
 	unit.RegisterSpell(SpellConfig{
 		ActionID: ActionID{OtherID: proto.OtherAction_OtherActionRageGain},
 	})
 
 	unit.rageBar = rageBar{
-		unit:                  unit,
-		damageDealtMultiplier: options.DamageDealtMultiplier,
-		damageTakenMultiplier: options.DamageTakenMultiplier,
-		startingRage:          max(0, min(options.StartingRage, MaxRage)),
-		RageRefundMetrics:     unit.NewRageMetrics(ActionID{OtherID: proto.OtherAction_OtherActionRefund}),
+		unit:                   unit,
+		damageDealtMultiplier:  options.DamageDealtMultiplier,
+		damageTakenMultiplier:  options.DamageTakenMultiplier,
+		offHandDealtMultiplier: 1,
+		maxRage:                DefaultMaxRage,
+		startingRage:           max(0, min(options.StartingRage, DefaultMaxRage)),
+		RageRefundMetrics:      unit.NewRageMetrics(ActionID{OtherID: proto.OtherAction_OtherActionRefund}),
 	}
 }
 
@@ -148,6 +162,10 @@ func (unit *Unit) HasRageBar() bool {
 
 func (unit *Unit) AddDamageDealtRageMultiplier(multi float64) {
 	unit.rageBar.damageDealtMultiplier *= multi
+}
+
+func (unit *Unit) AddOffHandDealtRageMultiplier(multi float64) {
+	unit.rageBar.offHandDealtMultiplier *= multi
 }
 
 func (unit *Unit) AddDamageTakenRageMultiplier(multi float64) {
@@ -162,6 +180,17 @@ func (unit *Unit) AddDamageTakenRageBonus(bonus float64) {
 	unit.rageBar.flatDamageTakenBonusRage += bonus
 }
 
+func (unit *Unit) AddMaxRage(amount float64) {
+	unit.rageBar.maxRage += amount
+}
+
+func (unit *Unit) GetMaxRage() float64 {
+	if unit.rageBar.maxRage == 0 {
+		return DefaultMaxRage
+	}
+	return unit.rageBar.maxRage
+}
+
 func (rb *rageBar) CurrentRage() float64 {
 	return rb.currentRage
 }
@@ -171,7 +200,7 @@ func (rb *rageBar) AddRage(sim *Simulation, amount float64, metrics *ResourceMet
 		panic("Trying to add negative rage!")
 	}
 
-	newRage := min(rb.currentRage+amount, MaxRage)
+	newRage := min(rb.currentRage+amount, rb.maxRage)
 	metrics.AddEvent(amount, newRage-rb.currentRage)
 
 	if sim.Log != nil {
@@ -188,7 +217,6 @@ func (rb *rageBar) AddRage(sim *Simulation, amount float64, metrics *ResourceMet
 			rb.unit.OnRageChange(sim, metrics)
 		},
 	})
-
 }
 
 func (rb *rageBar) SpendRage(sim *Simulation, amount float64, metrics *ResourceMetrics) {
@@ -237,8 +265,6 @@ func (rb *rageBar) doneIteration() {
 			continue
 		}
 
-		// Need to exclude rage gained from white hits. Rather than have a manual list of all IDs that would
-		// apply here (autos, WF attack, sword spec procs, etc), just check if the effect caused any damage.
 		sourceSpell := rb.unit.GetSpell(resourceMetrics.ActionID)
 		if sourceSpell != nil && sourceSpell.SpellMetrics[0].TotalDamage > 0 {
 			continue
@@ -253,7 +279,7 @@ type RageCostOptions struct {
 	Cost float64
 
 	Refund        float64
-	RefundMetrics *ResourceMetrics // Optional, will default to unit.RageRefundMetrics if not supplied.
+	RefundMetrics *ResourceMetrics
 }
 type RageCost struct {
 	Refund          float64

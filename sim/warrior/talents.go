@@ -27,11 +27,14 @@ func (warrior *Warrior) ApplyTalents() {
 	warrior.applyUnbridledWrath()
 	warrior.applyDualWieldSpecialization()
 	warrior.applyEnrage()
+	warrior.applyPrecision()
+	warrior.applyRagingBlows()
 	warrior.applyFlurry()
 	warrior.applyShieldSpecialization()
 	warrior.registerDeathWishCD()
 	warrior.registerSweepingStrikesCD()
 	warrior.registerLastStandCD()
+	warrior.applyBoundlessRage()
 }
 
 func (warrior *Warrior) applyAngerManagement() {
@@ -159,14 +162,18 @@ func (warrior *Warrior) registerSwordSpecialization(procMask core.ProcMask) {
 		},
 	})
 }
-
+func (warrior *Warrior) applyBoundlessRage() {
+	if warrior.Talents.BoundlessRage == 0 {
+		return
+	}
+	warrior.AddMaxRage(10 * float64(warrior.Talents.BoundlessRage))
+}
 func (warrior *Warrior) applyUnbridledWrath() {
 	if warrior.Talents.UnbridledWrath == 0 {
 		return
 	}
 
-	procChance := 0.08 * float64(warrior.Talents.UnbridledWrath)
-
+	procChance := 0.12 * float64(warrior.Talents.UnbridledWrath)
 	rageMetrics := warrior.NewRageMetrics(core.ActionID{SpellID: 12964})
 
 	warrior.RegisterAura(core.Aura{
@@ -179,10 +186,18 @@ func (warrior *Warrior) applyUnbridledWrath() {
 			if !result.Landed() {
 				return
 			}
-
-			if spell.ProcMask.Matches(core.ProcMaskMeleeWhiteHit) && sim.RandomFloat("Unbrided Wrath") < procChance {
-				warrior.AddRage(sim, 1, rageMetrics)
+			if !spell.ProcMask.Matches(core.ProcMaskMeleeWhiteHit) {
+				return
 			}
+			if sim.RandomFloat("Unbridled Wrath") >= procChance {
+				return
+			}
+
+			rage := 1.0
+			if warrior.MainHand().HandType == proto.HandType_HandTypeTwoHand {
+				rage = 2.0
+			}
+			warrior.AddRage(sim, rage, rageMetrics)
 		},
 	})
 }
@@ -192,10 +207,22 @@ func (warrior *Warrior) applyDualWieldSpecialization() {
 		return
 	}
 
-	multiplier := 1 + 0.05*float64(warrior.Talents.DualWieldSpecialization)
+	points := float64(warrior.Talents.DualWieldSpecialization)
+	damageMulti := 1 + 0.05*points
 	warrior.OnSpellRegistered(func(spell *core.Spell) {
 		if spell.ProcMask.Matches(core.ProcMaskMeleeOH) && spell.BonusCoefficient > 0 {
-			spell.DamageMultiplier *= multiplier
+			spell.DamageMultiplier *= damageMulti
+		}
+	})
+
+	// Forever: +20% OH rage per point.
+	warrior.Unit.AddOffHandDealtRageMultiplier(1 + 0.20*points)
+
+	// Forever: +2% OH hit per point
+	ohHit := 2 * points * core.MeleeHitRatingPerHitChance
+	warrior.OnSpellRegistered(func(spell *core.Spell) {
+		if spell.ProcMask.Matches(core.ProcMaskMeleeOH) {
+			spell.BonusHitRating += ohHit
 		}
 	})
 }
@@ -250,6 +277,21 @@ func (warrior *Warrior) applyEnrage() {
 			}
 		},
 	})
+}
+
+func (warrior *Warrior) applyPrecision() {
+	if warrior.Talents.Precision == 0 {
+		return
+	}
+	warrior.AddStat(stats.MeleeHit, core.MeleeHitRatingPerHitChance*float64(warrior.Talents.Precision))
+}
+func (warrior *Warrior) applyRagingBlows() {
+	if !warrior.Talents.RagingBlows {
+		return
+	}
+	if warrior.Cleave != nil {
+		warrior.Cleave.Cost.BaseCost -= 2
+	}
 }
 
 // func (warrior *Warrior) applyFlurry() {
@@ -332,7 +374,7 @@ func (warrior *Warrior) makeFlurryAura(points int32) *core.Aura {
 	}
 
 	spellID := []int32{12319, 12971, 12972, 12973, 12974}[points-1]
-	attackSpeed := []float64{1.1, 1.15, 1.2, 1.25, 1.3}[points-1]
+	attackSpeed := []float64{1.5, 1.10, 1.15, 1.20, 1.25}[points-1]
 
 	aura := warrior.GetOrRegisterAura(core.Aura{
 		Label:     fmt.Sprintf("Flurry Proc (%d)", spellID),

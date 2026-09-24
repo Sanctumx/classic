@@ -16,6 +16,7 @@ func applyRaceEffects(agent Agent) {
 	case proto.Race_RaceDwarf:
 		character.AddStat(stats.FrostResistance, 10)
 		character.GunSpecializationAura()
+		character.MaceSpecializationAura()
 
 		actionID := ActionID{SpellID: 20594}
 
@@ -47,26 +48,26 @@ func applyRaceEffects(agent Agent) {
 			Spell: spell,
 			Type:  CooldownTypeSurvival,
 			ShouldActivate: func(s *Simulation, c *Character) bool {
-				// Only castable with manual APL Action
 				return false
 			},
 		})
 	case proto.Race_RaceGnome:
 		character.AddStat(stats.ArcaneResistance, 10)
-		character.MultiplyStat(stats.Intellect, 1.05)
+		if character.HasRageBar() {
+			character.AddMaxRage(10)
+		} else {
+			character.MultiplyStat(stats.Intellect, 1.05)
+		}
 	case proto.Race_RaceHuman:
 		character.MultiplyStat(stats.Spirit, 1.05)
 		character.SwordSpecializationAura()
-		character.MaceSpecializationAura()
 	case proto.Race_RaceNightElf:
 		character.AddStat(stats.NatureResistance, 10)
 		character.AddStat(stats.Dodge, 1)
-		// TODO: Shadowmeld?
 	case proto.Race_RaceOrc:
 		character.AxeSpecializationAura()
 
 		if character.Class == proto.Class_ClassHunter || character.Class == proto.Class_ClassWarlock {
-			// Command Damage dealt by Hunter and Warlock pets increased by 5%
 			for _, pet := range character.Pets {
 				if !pet.IsGuardian() {
 					pet.PseudoStats.DamageDealtMultiplier *= 1.05
@@ -74,19 +75,18 @@ func applyRaceEffects(agent Agent) {
 			}
 		}
 
-		// Blood Fury
 		actionID := ActionID{SpellID: 20572}
 		var bloodFuryAP float64
 		bloodFuryAura := character.RegisterAura(Aura{
 			Label:    "Blood Fury",
 			ActionID: actionID,
 			Duration: time.Second * 15,
-			// Tooltip is misleading; ap bonus is base AP plus AP from current strength, does not include +attackpower on items/buffs
 			OnGain: func(aura *Aura, sim *Simulation) {
-				bloodFuryAP = (character.GetBaseStats()[stats.AttackPower] + (character.GetStat(stats.Strength) * APPerStrength[character.Class]) + (character.GetStat(stats.Agility) * APPerAgility[character.Class])) * 0.25
+				bloodFuryAP = (character.GetBaseStats()[stats.AttackPower] +
+					(character.GetStat(stats.Strength) * APPerStrength[character.Class]) +
+					(character.GetStat(stats.Agility) * APPerAgility[character.Class])) * 0.10
 				character.AddStatDynamic(sim, stats.AttackPower, bloodFuryAP)
 			},
-
 			OnExpire: func(aura *Aura, sim *Simulation) {
 				character.AddStatDynamic(sim, stats.AttackPower, -bloodFuryAP)
 			},
@@ -116,11 +116,11 @@ func applyRaceEffects(agent Agent) {
 	case proto.Race_RaceTauren:
 		character.AddStat(stats.NatureResistance, 10)
 		character.MultiplyStat(stats.Health, 1.05)
+		character.AddStat(stats.MeleeHit, 1)
 	case proto.Race_RaceTroll:
 		character.BowSpecializationAura()
 		character.ThrownSpecializationAura()
 
-		// Beast Slaying (+5% damage to beasts)
 		character.Env.RegisterPostFinalizeEffect(func() {
 			for _, t := range character.Env.Encounter.Targets {
 				if t.MobType == proto.MobType_MobTypeBeast {
@@ -132,11 +132,8 @@ func applyRaceEffects(agent Agent) {
 			}
 		})
 
-		// Berserking
 		berserkingTimer := character.NewTimer()
-		// Baseline cooldown
 		makeBerserkingCooldown(character, 0, berserkingTimer)
-		// Hard-coded percentage cooldown options
 		makeBerserkingCooldown(character, .1, berserkingTimer)
 		makeBerserkingCooldown(character, .15, berserkingTimer)
 		makeBerserkingCooldown(character, .2, berserkingTimer)
@@ -147,8 +144,6 @@ func applyRaceEffects(agent Agent) {
 	}
 }
 
-// If customPercentage is 0, use the baseline Berserking calculations from health missing
-// otherwise create a cooldown hard-coded to the custom percentage.
 func makeBerserkingCooldown(character *Character, customPercentage float64, timer *Timer) {
 	actionID := ActionID{SpellID: 26297, Tag: int32(customPercentage * 20)}
 
@@ -161,7 +156,6 @@ func makeBerserkingCooldown(character *Character, customPercentage float64, time
 		if customPercentage != 0 {
 			return customPercentage
 		}
-		// from 10% at full health to 30% at 40% or less health
 		switch hp := character.CurrentHealthPercent(); {
 		case hp >= 1:
 			return 0.1
@@ -175,17 +169,14 @@ func makeBerserkingCooldown(character *Character, customPercentage float64, time
 	var berserkingAura *Aura
 	var berserkingHaste float64
 	if character.HasManaBar() {
-		// Mana-using classes gain a flat % reduction in attack and cast speed
 		berserkingAura = character.RegisterAura(Aura{
 			Label:    label,
 			ActionID: actionID,
 			Duration: time.Second * 10,
 			OnGain: func(aura *Aura, sim *Simulation) {
 				berserkingHaste = 1 / (1 - calcBerserkingPct())
-
 				character.MultiplyCastSpeed(berserkingHaste)
 				character.MultiplyAttackSpeed(sim, berserkingHaste)
-
 				if sim.Log != nil {
 					character.Log(sim, "Berserking increased attack and casting speed by %.2f%% (%.2f%% hp)", berserkingHaste*100-100, character.CurrentHealthPercent()*100)
 				}
@@ -196,16 +187,13 @@ func makeBerserkingCooldown(character *Character, customPercentage float64, time
 			},
 		})
 	} else {
-		// Non-mana bar classes gain a flat % reduction in attack and cast speed
 		berserkingAura = character.RegisterAura(Aura{
 			Label:    label,
 			ActionID: actionID,
 			Duration: time.Second * 10,
 			OnGain: func(aura *Aura, sim *Simulation) {
 				berserkingHaste = 1 + calcBerserkingPct()
-
 				character.MultiplyAttackSpeed(sim, berserkingHaste)
-
 				if sim.Log != nil {
 					character.Log(sim, "Berserking increased attack speed by %.2f%% (%.2f%% hp)", berserkingHaste*100-100, character.CurrentHealthPercent()*100)
 				}
@@ -218,14 +206,12 @@ func makeBerserkingCooldown(character *Character, customPercentage float64, time
 
 	config := SpellConfig{
 		ActionID: actionID,
-
 		Cast: CastConfig{
 			CD: Cooldown{
 				Timer:    timer,
 				Duration: time.Minute * 3,
 			},
 		},
-
 		ApplyEffects: func(sim *Simulation, _ *Unit, _ *Spell) {
 			berserkingAura.Activate(sim)
 		},
@@ -253,7 +239,6 @@ func (character *Character) GetFaction() proto.Faction {
 		return proto.Faction_Alliance
 	} else if slices.Contains([]proto.Race{proto.Race_RaceOrc, proto.Race_RaceTroll, proto.Race_RaceTauren, proto.Race_RaceUndead}, character.Race) {
 		return proto.Faction_Horde
-	} else {
-		return proto.Faction_Unknown
 	}
+	return proto.Faction_Unknown
 }

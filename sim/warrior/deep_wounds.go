@@ -19,11 +19,13 @@ func (warrior *Warrior) applyDeepWounds() {
 	}[warrior.Talents.DeepWounds]
 
 	warrior.DeepWounds = warrior.RegisterSpell(AnyStance, core.SpellConfig{
-		SpellCode:   SpellCode_WarriorDeepWounds,
-		ActionID:    core.ActionID{SpellID: spellID},
-		SpellSchool: core.SpellSchoolPhysical,
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell,
+		SpellCode:       SpellCode_WarriorDeepWounds,
+		ActionID:        core.ActionID{SpellID: spellID},
+		SpellSchool:     core.SpellSchoolPhysical,
+		DefenseType:     core.DefenseTypeMelee,
+		CritDamageBonus: warrior.impale(),
+		ProcMask:        core.ProcMaskEmpty,
+		Flags:           core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
@@ -38,7 +40,7 @@ func (warrior *Warrior) applyDeepWounds() {
 
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				attackTable := warrior.AttackTables[target.UnitIndex][proto.CastType_CastTypeMainHand]
-				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable, true) // Double dips on attackers mods
+				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable, true)
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
 			},
 		},

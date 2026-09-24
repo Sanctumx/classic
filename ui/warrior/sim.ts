@@ -77,24 +77,28 @@ const SPEC_CONFIG = registerSpecConfig(Spec.SpecWarrior, {
 		debuffs: Presets.DefaultDebuffs,
 	},
 
-	modifyDisplayStats: (player: Player<Spec.SpecWarrior>) => {
-		let stats = new Stats();
+		modifyDisplayStats: (player: Player<Spec.SpecWarrior>) => {
+		let buffs = new Stats();
 		const stance = player.getSpecOptions().stance;
 		if (stance === WarriorStance.WarriorStanceBerserker || (stance === WarriorStance.WarriorStanceNone && player.getTalentTree() === 1)) {
-			stats = stats.addStat(Stat.StatMeleeCrit, 3);
+			buffs = buffs.addStat(Stat.StatMeleeCrit, 3);
+		}
+
+		let talents = new Stats();
+		const precision = player.getTalents().precision ?? 0;
+		if (precision > 0) {
+			talents = talents.addStat(Stat.StatMeleeHit, precision);
 		}
 
 		return {
-			buffs: stats,
+			talents: talents,
+			buffs: buffs,
 		};
 	},
 
-	// IconInputs to include in the 'Player' section on the settings tab.
 	playerIconInputs: [WarriorInputs.ShoutPicker<Spec.SpecWarrior>(), WarriorInputs.StancePicker<Spec.SpecWarrior>()],
-	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [BuffDebuffInputs.SpellScorchDebuff],
 	excludeBuffDebuffInputs: [],
-	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
 		inputs: [
 			WarriorInputs.StartingRage<Spec.SpecWarrior>(),

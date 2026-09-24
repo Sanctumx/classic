@@ -24,11 +24,13 @@ func (warrior *Warrior) registerRendSpell() {
 	damageMultiplier := []float64{1, 1.15, 1.25, 1.35}[warrior.Talents.ImprovedRend]
 
 	warrior.Rend = warrior.RegisterSpell(BattleStance|DefensiveStance, core.SpellConfig{
-		SpellCode:   SpellCode_WarriorRend,
-		ActionID:    core.ActionID{SpellID: rend.spellID},
-		SpellSchool: core.SpellSchoolPhysical,
-		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagAPL | core.SpellFlagNoOnCastComplete | SpellFlagOffensive,
+		SpellCode:       SpellCode_WarriorRend,
+		ActionID:        core.ActionID{SpellID: rend.spellID},
+		SpellSchool:     core.SpellSchoolPhysical,
+		DefenseType:     core.DefenseTypeMelee,
+		CritDamageBonus: warrior.impale(),
+		ProcMask:        core.ProcMaskMeleeMHSpecial,
+		Flags:           core.SpellFlagAPL | core.SpellFlagNoOnCastComplete | SpellFlagOffensive,
 
 		RageCost: core.RageCostOptions{
 			Cost:   10,
@@ -54,7 +56,7 @@ func (warrior *Warrior) registerRendSpell() {
 				dot.Snapshot(target, baseDamage, isRollover)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTickPhysicalCrit)
 			},
 		},
 

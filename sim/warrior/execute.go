@@ -10,6 +10,11 @@ func (warrior *Warrior) registerExecuteSpell() {
 	convertedRageDamage := 15.0
 	spellID := int32(20662)
 
+	imp := warrior.Talents.ImprovedExecute
+	if imp > 2 {
+		imp = 2
+	}
+
 	var rageMetrics *core.ResourceMetrics
 	warrior.Execute = warrior.RegisterSpell(BattleStance|BerserkerStance, core.SpellConfig{
 		SpellCode:   SpellCode_WarriorExecute,
@@ -20,7 +25,7 @@ func (warrior *Warrior) registerExecuteSpell() {
 		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL | core.SpellFlagPassiveSpell | SpellFlagOffensive,
 
 		RageCost: core.RageCostOptions{
-			Cost:   15 - []float64{0, 2, 5}[warrior.Talents.ImprovedExecute],
+			Cost:   15 - []float64{0, 3, 5}[imp],
 			Refund: 0.8,
 		},
 		Cast: core.CastConfig{
@@ -41,8 +46,6 @@ func (warrior *Warrior) registerExecuteSpell() {
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			extraRage := spell.Unit.CurrentRage()
 			warrior.SpendRage(sim, extraRage, rageMetrics)
-			// We must count this rage event if the spell itself cost 0,
-			// otherwise we could end up with 0 events even though rage was spent.
 			if spell.Cost.GetCurrentCost() > 0 {
 				rageMetrics.Events--
 			}
