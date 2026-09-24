@@ -10,6 +10,14 @@ import (
 const MaxRage = 100.0
 const ThreatPerRageGained = 5
 
+// Forever white-hit rage: flat per swing, scaled by listed weapon speed.
+// 1H ≈ 3.5 rage per second of speed, 2H ≈ 4.5, OH is half of 1H.
+const (
+	ForeverOneHandRagePerSecond = 3.5
+	ForeverTwoHandRagePerSecond = 4.5
+	ForeverOffHandRageFactor    = 0.5
+)
+
 // OnRageChange is called any time rage is increased.
 type OnRageChange func(aura *Aura, sim *Simulation, metrics *ResourceMetrics)
 
@@ -49,9 +57,19 @@ func GetRageConversion(attacker_level int32) float64 {
 	}
 }
 
+func foreverWhiteHitRage(weapon *Weapon) float64 {
+	if weapon == nil || weapon.SwingSpeed == 0 {
+		return 0
+	}
+	// newWeaponFromItem sets NormalizedSwingSpeed to 3.3 for two-handers.
+	if weapon.NormalizedSwingSpeed == 3.3 {
+		return ForeverTwoHandRagePerSecond * weapon.SwingSpeed
+	}
+	return ForeverOneHandRagePerSecond * weapon.SwingSpeed
+}
+
 func (unit *Unit) EnableRageBar(options RageBarOptions) {
 	rageFromDamageTakenMetrics := unit.NewRageMetrics(ActionID{OtherID: proto.OtherAction_OtherActionDamageTaken})
-	rageConversion := GetRageConversion(unit.Level)
 
 	unit.SetCurrentPowerBar(RageBar)
 	unit.RegisterAura(Aura{
@@ -73,34 +91,27 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
-			if unit.GetCurrentPowerBar() != RageBar {
-				return
-			}
-			if result.Outcome.Matches(OutcomeMiss) {
-				return
-			}
-			if spell.ProcMask != ProcMaskMeleeMHAuto && spell.ProcMask != ProcMaskMeleeOHAuto {
-				return
-			}
-
-			damage := result.Damage
 			if result.Outcome.Matches(OutcomeDodge | OutcomeParry) {
-				// Rage is still generated for dodges/parries, based on the damage it WOULD have done.
-				damage = result.PreOutcomeDamage
+				return
 			}
 
-			generatedRage := damage * 7.5 / rageConversion
+			var generatedRage float64
+			if spell.ProcMask == ProcMaskMeleeOHAuto {
+				generatedRage = foreverWhiteHitRage(unit.AutoAttacks.OH()) * ForeverOffHandRageFactor
+			} else {
+				generatedRage = foreverWhiteHitRage(unit.AutoAttacks.MH())
+			}
+
 			generatedRage *= unit.rageBar.damageDealtMultiplier
 			generatedRage += unit.rageBar.flatDamageDealtBonusRage
 
 			var metrics *ResourceMetrics
 			if spell.Cost != nil {
 				metrics = spell.Cost.SpellCostFunctions.(*RageCost).ResourceMetrics
+			} else if spell.ResourceMetrics != nil {
+				metrics = spell.ResourceMetrics
 			} else {
-				// Seems like only auto attacks are using this. See OnInit handler of this aura.
-				if spell.ResourceMetrics == nil {
-					panic(fmt.Sprintf("Spell ResourceMetrics are nil for spell %v", spell.ActionID))
-				}
+				spell.ResourceMetrics = unit.NewRageMetrics(spell.ActionID)
 				metrics = spell.ResourceMetrics
 			}
 			unit.AddRage(sim, generatedRage, metrics)
