@@ -19,13 +19,11 @@ func (warrior *Warrior) applyDeepWounds() {
 	}[warrior.Talents.DeepWounds]
 
 	warrior.DeepWounds = warrior.RegisterSpell(AnyStance, core.SpellConfig{
-		SpellCode:       SpellCode_WarriorDeepWounds,
-		ActionID:        core.ActionID{SpellID: spellID},
-		SpellSchool:     core.SpellSchoolPhysical,
-		DefenseType:     core.DefenseTypeMelee,
-		CritDamageBonus: warrior.impale(),
-		ProcMask:        core.ProcMaskEmpty,
-		Flags:           core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell,
+		SpellCode:   SpellCode_WarriorDeepWounds,
+		ActionID:    core.ActionID{SpellID: spellID},
+		SpellSchool: core.SpellSchoolPhysical,
+		ProcMask:    core.ProcMaskEmpty,
+		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
@@ -46,7 +44,7 @@ func (warrior *Warrior) applyDeepWounds() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.Dot(target).Apply(sim) //Resets the tick counter with Apply vs ApplyorRefresh
+			spell.Dot(target).ApplyOrRefresh(sim)
 			spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHitNoHitCounter)
 		},
 	})
@@ -57,12 +55,9 @@ func (warrior *Warrior) applyDeepWounds() {
 			if spell.ProcMask.Matches(core.ProcMaskEmpty) || !spell.SpellSchool.Matches(core.SpellSchoolPhysical) {
 				return
 			}
-
-			// Ravager doesn't proc Deep Wounds
 			if spell.ActionID.SpellID == 9633 {
 				return
 			}
-
 			if result.Outcome.Matches(core.OutcomeCrit) {
 				warrior.procDeepWounds(sim, result.Target, spell.IsOH())
 			}
@@ -73,21 +68,11 @@ func (warrior *Warrior) applyDeepWounds() {
 func (warrior *Warrior) procDeepWounds(sim *core.Simulation, target *core.Unit, isOh bool) {
 	dot := warrior.DeepWounds.Dot(target)
 
-	var awd float64
-	if isOh {
-		attackTableOh := warrior.AttackTables[target.UnitIndex][proto.CastType_CastTypeOffHand]
-		adm := warrior.AutoAttacks.OHAuto().AttackerDamageMultiplier(attackTableOh, true)
-		awd = warrior.AutoAttacks.OH().CalculateAverageWeaponDamage(dot.Spell.MeleeAttackPower(target)) * 0.5 * adm
-	} else { // MH
-		attackTableMh := warrior.AttackTables[target.UnitIndex][proto.CastType_CastTypeMainHand]
-		adm := warrior.AutoAttacks.MHAuto().AttackerDamageMultiplier(attackTableMh, true)
-		awd = warrior.AutoAttacks.MH().CalculateAverageWeaponDamage(dot.Spell.MeleeAttackPower(target)) * adm
-	}
+	attackTable := warrior.AttackTables[target.UnitIndex][proto.CastType_CastTypeMainHand]
+	adm := warrior.AutoAttacks.MHAuto().AttackerDamageMultiplier(attackTable, true)
+	awd := warrior.AutoAttacks.MH().CalculateAverageWeaponDamage(dot.Spell.MeleeAttackPower(target)) * adm
 
-	newDamage := awd * 0.2 * float64(warrior.Talents.DeepWounds) // 60% of average attackers damage
-
-	dot.SnapshotBaseDamage = newDamage / 4.0 // spread over 4 ticks of the dot
+	dot.SnapshotBaseDamage = awd * 0.2 * float64(warrior.Talents.DeepWounds) / 4.0
 	dot.SnapshotAttackerMultiplier = 1
-
-	warrior.DeepWounds.Cast(sim, target)
+	dot.ApplyOrRefresh(sim)
 }

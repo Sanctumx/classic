@@ -521,10 +521,12 @@ func (spell *Spell) CanCast(sim *Simulation, target *Unit) bool {
 	}
 
 	// While casting no other action is possible except rare cast-while-casting spells
-	if spell.Unit.IsCasting(sim) {
-		//if sim.Log != nil {
-		//	sim.Log("Cant cast because already casting")
-		//}
+	if spell.Unit.Hardcast.Expires > sim.CurrentTime &&
+		!spell.ProcMask.Matches(ProcMaskRangedAuto) {
+		return false
+	}
+
+	if spell.Unit.IsCasting(sim) && !spell.ProcMask.Matches(ProcMaskRangedAuto) {
 		return false
 	}
 

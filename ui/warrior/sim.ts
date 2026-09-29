@@ -77,27 +77,17 @@ const SPEC_CONFIG = registerSpecConfig(Spec.SpecWarrior, {
 		debuffs: Presets.DefaultDebuffs,
 	},
 
-		modifyDisplayStats: (player: Player<Spec.SpecWarrior>) => {
+	modifyDisplayStats: (player: Player<Spec.SpecWarrior>) => {
 		let buffs = new Stats();
 		const stance = player.getSpecOptions().stance;
 		if (stance === WarriorStance.WarriorStanceBerserker || (stance === WarriorStance.WarriorStanceNone && player.getTalentTree() === 1)) {
 			buffs = buffs.addStat(Stat.StatMeleeCrit, 3);
 		}
-
-		let talents = new Stats();
-		const precision = player.getTalents().precision ?? 0;
-		if (precision > 0) {
-			talents = talents.addStat(Stat.StatMeleeHit, precision);
-		}
-
-		return {
-			talents: talents,
-			buffs: buffs,
-		};
+		return { buffs: buffs };
 	},
 
 	playerIconInputs: [WarriorInputs.ShoutPicker<Spec.SpecWarrior>(), WarriorInputs.StancePicker<Spec.SpecWarrior>()],
-	includeBuffDebuffInputs: [BuffDebuffInputs.SpellScorchDebuff],
+	includeBuffDebuffInputs: [BuffDebuffInputs.SpellScorchDebuff, BuffDebuffInputs.WindfuryTotem],
 	excludeBuffDebuffInputs: [],
 	otherInputs: {
 		inputs: [

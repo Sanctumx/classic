@@ -24,6 +24,9 @@ type HunterPet struct {
 }
 
 func (hunter *Hunter) NewHunterPet() *HunterPet {
+	if hunter.Talents.LoneWolf {
+		return nil
+	}
 	if hunter.Options.PetType == proto.Hunter_Options_PetNone {
 		return nil
 	}
@@ -63,7 +66,7 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 
 	baseMinDamage = 18.17 * attackSpeed
 	baseMaxDamage = 27.66 * attackSpeed
-	
+
 	hunterPetBaseStats = stats.Stats{
 		stats.Strength:  136,
 		stats.Agility:   100,
@@ -189,8 +192,18 @@ func (hp *HunterPet) ExecuteCustomRotation(sim *core.Simulation) {
 
 func (hunter *Hunter) makeStatInheritance() core.PetStatInheritance {
 	return func(ownerStats stats.Stats) stats.Stats {
-		// No stat inheritance in classic
-		return stats.Stats{}
+		ap := ownerStats[stats.AttackPower]
+		rap := ownerStats[stats.RangedAttackPower]
+		if rap > ap {
+			ap = rap
+		}
+		return stats.Stats{
+			stats.AttackPower: ap * 0.10,
+			stats.MeleeCrit:   ownerStats[stats.MeleeCrit],
+			stats.SpellCrit:   ownerStats[stats.SpellCrit],
+			stats.MeleeHit:    ownerStats[stats.MeleeHit],
+			stats.SpellHit:    ownerStats[stats.MeleeHit],
+		}
 	}
 }
 

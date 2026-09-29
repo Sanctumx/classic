@@ -919,7 +919,41 @@ func registerPotionCD(agent Agent, consumes *proto.Consumes) {
 		character.AddMajorCooldown(defaultMCD)
 	}
 }
+func makeMajorFrenzyPotionMCD(_ int32, character *Character, cdTimer *Timer) MajorCooldown {
+	actionID := ActionID{ItemID: 13442}
+	aura := character.NewTemporaryStatsAura(
+		"Major Frenzy Potion",
+		actionID,
+		stats.Stats{
+			stats.AttackPower:       80,
+			stats.RangedAttackPower: 80,
+		},
+		time.Second*30,
+	)
 
+	return MajorCooldown{
+		Type: CooldownTypeDPS,
+		ShouldActivate: func(sim *Simulation, character *Character) bool {
+			return !character.IsShapeshifted()
+		},
+		Spell: character.GetOrRegisterSpell(SpellConfig{
+			ActionID: actionID,
+			Flags:    SpellFlagNoOnCastComplete,
+			Cast: CastConfig{
+				CD: Cooldown{
+					Timer:    cdTimer,
+					Duration: time.Minute * 2,
+				},
+				ModifyCast: func(sim *Simulation, _ *Spell, _ *Cast) {
+					character.CancelShapeshift(sim)
+				},
+			},
+			ApplyEffects: func(sim *Simulation, _ *Unit, _ *Spell) {
+				aura.Activate(sim)
+			},
+		}),
+	}
+}
 func makePotionActivation(potionType proto.Potions, character *Character, potionCD *Timer) MajorCooldown {
 	mcd := makePotionActivationInternal(potionType, character, potionCD)
 	if mcd.Spell != nil {
@@ -1188,6 +1222,8 @@ func makePotionActivationInternal(potionType proto.Potions, character *Character
 		return makeManaConsumableMCD(13443, character, potionCD)
 	case proto.Potions_MajorManaPotion:
 		return makeManaConsumableMCD(13444, character, potionCD)
+	case proto.Potions_MajorFrenzyPotion:
+		return makeMajorFrenzyPotionMCD(13442, character, potionCD)
 
 	case proto.Potions_RagePotion:
 		return makeRageConsumableMCD(5631, character, potionCD)
@@ -1242,6 +1278,7 @@ func registerConjuredCD(agent Agent, consumes *proto.Consumes) {
 		mcd = makeManaConsumableMCD(12662, character, timer)
 	case proto.Conjured_ConjuredMinorRecombobulator:
 		mcd = makeManaConsumableMCD(4381, character, timer)
+
 	// Handled in the rogue package
 	// case proto.Conjured_ConjuredRogueThistleTea:
 	default:

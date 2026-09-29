@@ -63,13 +63,13 @@ var BuffSpellValues = map[BuffName]stats.Stats{
 		stats.NatureResistance: 60,
 	},
 	BattleShout: {
-		stats.AttackPower: TernaryFloat64(IncludeAQ, 232, 193),
+		stats.AttackPower: 140,
 	},
 	BlessingOfMight: {
-		stats.AttackPower: TernaryFloat64(IncludeAQ, 185, 155),
+		stats.AttackPower: 133,
 	},
 	BlessingOfWisdom: {
-		stats.MP5: TernaryFloat64(IncludeAQ, 33, 30),
+		stats.MP5: 30,
 	},
 	HornOfLordaeron: {
 		stats.Strength: TernaryFloat64(IncludeAQ, 89, 70.15),
@@ -85,7 +85,7 @@ var BuffSpellValues = map[BuffName]stats.Stats{
 		stats.BonusArmor: 735,
 	},
 	GraceOfAir: {
-		stats.Agility: TernaryFloat64(IncludeAQ, 77, 67),
+		stats.Agility: 89,
 	},
 	FireResistanceAura: {
 		stats.FireResistance: 60,
@@ -103,17 +103,17 @@ var BuffSpellValues = map[BuffName]stats.Stats{
 		stats.MP5: 25,
 	},
 	MarkOfTheWild: {
-		stats.BonusArmor:       285,
-		stats.Stamina:          12,
-		stats.Agility:          12,
-		stats.Strength:         12,
-		stats.Intellect:        12,
-		stats.Spirit:           12,
-		stats.ArcaneResistance: 20,
-		stats.ShadowResistance: 20,
-		stats.NatureResistance: 20,
-		stats.FireResistance:   20,
-		stats.FrostResistance:  20,
+		stats.BonusArmor:       385,
+		stats.Stamina:          16,
+		stats.Agility:          16,
+		stats.Strength:         16,
+		stats.Intellect:        16,
+		stats.Spirit:           16,
+		stats.ArcaneResistance: 27,
+		stats.ShadowResistance: 27,
+		stats.NatureResistance: 27,
+		stats.FireResistance:   27,
+		stats.FrostResistance:  27,
 	},
 	NatureResistanceTotem: {
 		stats.NatureResistance: 60,
@@ -128,7 +128,7 @@ var BuffSpellValues = map[BuffName]stats.Stats{
 		stats.ShadowResistance: 60,
 	},
 	StrengthOfEarth: {
-		stats.Strength: TernaryFloat64(IncludeAQ, 77, 61),
+		stats.Strength: 53,
 	},
 	ScrollOfAgility: {
 		stats.Agility: 17,
@@ -231,11 +231,11 @@ func applyBuffEffects(agent Agent, playerFaction proto.Faction, raidBuffs *proto
 
 	if raidBuffs.GiftOfTheWild > 0 {
 		updateStats := BuffSpellValues[MarkOfTheWild]
-		if raidBuffs.GiftOfTheWild == proto.TristateEffect_TristateEffectImproved {
-			updateStats = updateStats.Multiply(1.35).Floor()
-		}
 		character.AddStats(updateStats)
 		bonusResist = updateStats[stats.NatureResistance]
+	}
+	if raidBuffs.WindfuryTotem {
+		ApplyWindfury(character)
 	}
 
 	if raidBuffs.NatureResistanceTotem {
@@ -320,11 +320,11 @@ func applyBuffEffects(agent Agent, playerFaction proto.Faction, raidBuffs *proto
 		character.AddStats(BuffSpellValues[ScrollOfSpirit])
 	}
 
-	if individualBuffs.BlessingOfKings && isAlliance {
+	if individualBuffs.BlessingOfKings {
 		MakePermanent(BlessingOfKingsAura(character))
 	}
 
-	if raidBuffs.SanctityAura && isAlliance {
+	if raidBuffs.SanctityAura {
 		MakePermanent(SanctityAuraAura(character))
 	}
 
@@ -335,48 +335,38 @@ func applyBuffEffects(agent Agent, playerFaction proto.Faction, raidBuffs *proto
 		}
 	*/
 
-	if raidBuffs.DevotionAura != proto.TristateEffect_TristateEffectMissing && isAlliance {
+	if raidBuffs.DevotionAura != proto.TristateEffect_TristateEffectMissing {
 		MakePermanent(DevotionAuraAura(&character.Unit, GetTristateValueInt32(raidBuffs.DevotionAura, 0, 2)))
 	}
 
-	if raidBuffs.StoneskinTotem != proto.TristateEffect_TristateEffectMissing && isHorde {
+	if raidBuffs.StoneskinTotem != proto.TristateEffect_TristateEffectMissing {
 		MakePermanent(StoneskinTotemAura(&character.Unit, GetTristateValueInt32(raidBuffs.StoneskinTotem, 0, 2)))
 	}
 
-	if raidBuffs.RetributionAura != proto.TristateEffect_TristateEffectMissing && isAlliance {
+	if raidBuffs.RetributionAura != proto.TristateEffect_TristateEffectMissing {
 		RetributionAura(character, GetTristateValueInt32(raidBuffs.RetributionAura, 0, 2))
 	}
 
 	if raidBuffs.BattleShout != proto.TristateEffect_TristateEffectMissing {
-		MakePermanent(BattleShoutAura(&character.Unit, GetTristateValueInt32(raidBuffs.BattleShout, 0, 5), 0, false)) // Do we implement 3pc wrath for the other sims?
+		MakePermanent(BattleShoutAura(&character.Unit, 0, 0, false))
 	}
 
-	if individualBuffs.BlessingOfMight != proto.TristateEffect_TristateEffectMissing && isAlliance {
-		MakePermanent(BlessingOfMightAura(&character.Unit, GetTristateValueInt32(individualBuffs.BlessingOfMight, 0, 5)))
+	if individualBuffs.BlessingOfMight != proto.TristateEffect_TristateEffectMissing {
+		MakePermanent(BlessingOfMightAura(&character.Unit, 0))
 	}
 
-	if raidBuffs.StrengthOfEarthTotem != proto.TristateEffect_TristateEffectMissing && isHorde {
-		multiplier := GetTristateValueFloat(raidBuffs.StrengthOfEarthTotem, 1, 1.15)
-		MakePermanent(StrengthOfEarthTotemAura(&character.Unit, multiplier))
+	if raidBuffs.StrengthOfEarthTotem != proto.TristateEffect_TristateEffectMissing {
+		MakePermanent(StrengthOfEarthTotemAura(&character.Unit, 1))
 	}
 
-	if raidBuffs.GraceOfAirTotem > 0 && isHorde {
-		multiplier := GetTristateValueFloat(raidBuffs.GraceOfAirTotem, 1, 1.15)
-		MakePermanent(GraceOfAirTotemAura(&character.Unit, multiplier))
+	if raidBuffs.GraceOfAirTotem > 0 {
+		MakePermanent(GraceOfAirTotemAura(&character.Unit, 1))
 	}
 
-	if individualBuffs.BlessingOfWisdom > 0 && isAlliance {
-		updateStats := BuffSpellValues[BlessingOfWisdom]
-		if individualBuffs.BlessingOfWisdom == proto.TristateEffect_TristateEffectImproved {
-			updateStats = updateStats.Multiply(1.2)
-		}
-		character.AddStats(updateStats)
-	} else if raidBuffs.ManaSpringTotem > 0 && isHorde {
-		updateStats := BuffSpellValues[ManaSpring]
-		if raidBuffs.ManaSpringTotem == proto.TristateEffect_TristateEffectImproved {
-			updateStats = updateStats.Multiply(1.25)
-		}
-		character.AddStats(updateStats)
+	if individualBuffs.BlessingOfWisdom > 0 {
+		character.AddStats(BuffSpellValues[BlessingOfWisdom])
+	} else if raidBuffs.ManaSpringTotem > 0 {
+		character.AddStats(BuffSpellValues[ManaSpring])
 	}
 
 	if raidBuffs.BattleSquawk > 0 {
@@ -447,28 +437,14 @@ func applyBuffEffects(agent Agent, playerFaction proto.Faction, raidBuffs *proto
 
 // Applies buffs to pets.
 func applyPetBuffEffects(petAgent PetAgent, playerFaction proto.Faction, raidBuffs *proto.RaidBuffs, partyBuffs *proto.PartyBuffs, individualBuffs *proto.IndividualBuffs) {
-	// Summoned pets, like Mage Water Elemental, aren't around to receive raid buffs.
-	// Also assume that applicable world buffs are applied to the starting pet only
-	if petAgent.GetPet().IsGuardian() || !petAgent.GetPet().enabledOnStart {
-		return
-	}
+	return
 
 	raidBuffs = googleProto.Clone(raidBuffs).(*proto.RaidBuffs)
 	partyBuffs = googleProto.Clone(partyBuffs).(*proto.PartyBuffs)
 	individualBuffs = googleProto.Clone(individualBuffs).(*proto.IndividualBuffs)
 
-	// We need to modify the buffs a bit because some things are applied to pets by
-	// the owner during combat or don't make sense for a pet.
 	individualBuffs.Innervates = 0
 	individualBuffs.PowerInfusions = 0
-
-	// Pets only receive Onyxia, Rend, and ZG buffs because they're globally applied in their respective zones
-	// SoD versions were removed from pets though
-	individualBuffs.FengusFerocity = false
-	individualBuffs.MoldarsMoxie = false
-	individualBuffs.SaygesFortune = proto.SaygesFortune_SaygesUnknown
-	individualBuffs.SongflowerSerenade = false
-	individualBuffs.SlipkiksSavvy = false
 
 	applyBuffEffects(petAgent, playerFaction, raidBuffs, partyBuffs, individualBuffs)
 }
@@ -1403,9 +1379,8 @@ var BattleShoutBaseAP = [BattleShoutRanks + 1]float64{0, 20, 40, 57, 93, 138, 19
 var BattleShoutLevel = [BattleShoutRanks + 1]int{0, 1, 12, 22, 32, 42, 52, 60}
 
 func BattleShoutAura(unit *Unit, impBattleShout int32, boomingVoicePts int32, has3pcWrath bool) *Aura {
-	rank := TernaryInt32(IncludeAQ, 7, 6)
-	spellId := BattleShoutSpellId[rank]
-	baseAP := BattleShoutBaseAP[rank]
+	spellId := BattleShoutSpellId[7]
+	baseAP := BuffSpellValues[BattleShout][stats.AttackPower] // 140
 
 	return unit.GetOrRegisterAura(Aura{
 		Label:      "Battle Shout",
@@ -1414,31 +1389,27 @@ func BattleShoutAura(unit *Unit, impBattleShout int32, boomingVoicePts int32, ha
 		BuildPhase: CharacterBuildPhaseBuffs,
 		OnGain: func(aura *Aura, sim *Simulation) {
 			aura.Unit.AddStatsDynamic(sim, stats.Stats{
-				stats.AttackPower: math.Floor(baseAP*(1+0.05*float64(impBattleShout)) + TernaryFloat64(has3pcWrath, 30, 0)),
+				stats.AttackPower: baseAP,
 			})
 		},
 		OnExpire: func(aura *Aura, sim *Simulation) {
 			aura.Unit.AddStatsDynamic(sim, stats.Stats{
-				stats.AttackPower: -1 * math.Floor(baseAP*(1+0.05*float64(impBattleShout))+TernaryFloat64(has3pcWrath, 30, 0)),
+				stats.AttackPower: -baseAP,
 			})
 		},
 	})
 }
 
 func TrueshotAura(unit *Unit) *Aura {
-	rangedAP := 100.0
-	meleeAP := 100.0
-
 	aura := MakePermanent(unit.RegisterAura(Aura{
 		Label:    "Trueshot Aura",
-		ActionID: ActionID{SpellID: 20906},
+		ActionID: ActionID{SpellID: 20905},
 	}))
 
 	makeExclusiveBuff(aura, BuffConfig{
 		Category: "TrueshotAura",
 		Stats: []StatConfig{
-			{stats.AttackPower, meleeAP, false},
-			{stats.RangedAttackPower, rangedAP, false},
+			{stats.RangedAttackPower, 100, false},
 		},
 	})
 

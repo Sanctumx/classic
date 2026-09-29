@@ -167,12 +167,7 @@ export class ActionId {
 	}
 	static makeSpellUrl(id: number): string {
 		const langPrefix = getWowheadLanguagePrefix();
-		const showBuff = spellIDsToShowBuffs.has(id);
-
-		let url = `https://wowhead.com/classic/${langPrefix}spell=${id}`;
-		if (showBuff) url = `${url}?buff=1`;
-
-		return url;
+		return `https://www.wowhead.com/forever/${langPrefix}spell=${id}`;
 	}
 	static async makeItemTooltipData(id: number, params?: Omit<WowheadTooltipItemParams, 'itemId'>) {
 		return buildWowheadTooltipDataset({ itemId: id, ...params });

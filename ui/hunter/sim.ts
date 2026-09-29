@@ -9,6 +9,7 @@ import { Stats } from '../core/proto_utils/stats.js';
 import * as HunterInputs from './inputs.js';
 import * as Presets from './presets.js';
 
+
 const SPEC_CONFIG = registerSpecConfig(Spec.SpecHunter, {
 	cssClass: 'hunter-sim-ui',
 	cssScheme: 'hunter',

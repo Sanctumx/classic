@@ -35,7 +35,7 @@ func (hunter *Hunter) getRaptorStrikeConfig(rank int) core.SpellConfig {
 		SpellSchool:   core.SpellSchoolPhysical,
 		DefenseType:   core.DefenseTypeMelee,
 		ProcMask:      core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeMHAuto,
-		Flags:         core.SpellFlagMeleeMetrics | SpellFlagStrike,
+		Flags:         core.SpellFlagMeleeMetrics | core.SpellFlagAPL | SpellFlagStrike,
 		Rank:          rank,
 		RequiredLevel: level,
 
@@ -77,7 +77,6 @@ func (hunter *Hunter) newRaptorStrikeHitSpell(rank int) *core.Spell {
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
 		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
 
-		BonusCritRating:  float64(hunter.Talents.SavageStrikes) * 10 * core.CritRatingPerCritChance,
 		CritDamageBonus:  hunter.mortalShots(),
 		DamageMultiplier: 1,
 		BonusCoefficient: 1,
@@ -132,14 +131,15 @@ func (hunter *Hunter) makeQueueSpellsAndAura() *core.Spell {
 }
 
 func (hunter *Hunter) registerRaptorStrikeSpell() {
-	rank := map[int32]int{
-		25: 4,
-		40: 6,
-		50: 7,
-		60: 8,
-	}[hunter.Level]
-
-	config := hunter.getRaptorStrikeConfig(rank)
-	hunter.RaptorStrike = hunter.GetOrRegisterSpell(config)
-	hunter.makeQueueSpellsAndAura()
+	maxRank := 8
+	best := 0
+	for r := 1; r <= maxRank; r++ {
+		if hunter.getRaptorStrikeConfig(r).RequiredLevel <= int(hunter.Level) {
+			best = r
+		}
+	}
+	if best == 0 {
+		return
+	}
+	hunter.RaptorStrike = hunter.GetOrRegisterSpell(hunter.getRaptorStrikeConfig(best))
 }

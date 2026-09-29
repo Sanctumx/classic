@@ -331,31 +331,34 @@ enum Potions {
 	GreaterManaPotion = 3;
 	SuperiorManaPotion = 4;
 	MajorManaPotion = 5;
+	MajorFrenzyPotion = 6;
 
 	// Rage Pots
-	RagePotion = 6;
-	GreatRagePotion = 7;
-	MightyRagePotion = 8;
+	RagePotion = 7;
+	GreatRagePotion = 8;
+	MightyRagePotion = 9;
 
 	// Armor Pots
-	LesserStoneshieldPotion = 9;
-	GreaterStoneshieldPotion = 10;
+	LesserStoneshieldPotion = 10;
+	GreaterStoneshieldPotion = 11;
 
 	// Healing Pots
-	LesserHealingPotion = 11;
-	HealingPotion = 12;
-	GreaterHealingPotion = 13;
-	SuperiorHealingPotion = 14;
-	MajorHealingPotion = 15;
+	LesserHealingPotion = 12;
+	HealingPotion = 13;
+	GreaterHealingPotion = 14;
+	SuperiorHealingPotion = 15;
+	MajorHealingPotion = 16;
 
 	// Resistance Pots
-	MagicResistancePotion = 16;
-	GreaterArcaneProtectionPotion = 17;
-	GreaterFireProtectionPotion = 18;
-	GreaterFrostProtectionPotion = 19;
-	GreaterHolyProtectionPotion = 20;
-	GreaterNatureProtectionPotion = 21;
-	GreaterShadowProtectionPotion = 22;
+	MagicResistancePotion = 17;
+	GreaterArcaneProtectionPotion = 18;
+	GreaterFireProtectionPotion = 19;
+	GreaterFrostProtectionPotion = 20;
+	GreaterHolyProtectionPotion = 21;
+	GreaterNatureProtectionPotion = 22;
+	GreaterShadowProtectionPotion = 23;
+
+
 
 	LesserManaPotion = 1 [deprecated = true];
 }
@@ -621,6 +624,7 @@ message RaidBuffs {
 	TristateEffect retribution_aura = 25;
 	bool sanctity_aura = 33;
 	int32 battle_squawk = 34;
+	bool windfury_totem = 40;
 }
 
 // Buffs that affect a single party.

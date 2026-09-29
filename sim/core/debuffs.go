@@ -56,10 +56,6 @@ func applyDebuffEffects(target *Unit, targetIdx int, debuffs *proto.Debuffs, rai
 		MakePermanent(CurseOfElementsAura(target))
 	}
 
-	if debuffs.CurseOfShadow {
-		MakePermanent(CurseOfShadowAura(target))
-	}
-
 	if debuffs.ImprovedScorch && targetIdx == 0 {
 		aura := ImprovedScorchAura(target)
 		SchedulePeriodicDebuffApplication(aura, PeriodicActionOptions{
@@ -158,7 +154,7 @@ func applyDebuffEffects(target *Unit, targetIdx int, debuffs *proto.Debuffs, rai
 		MakePermanent(DemoralizingShoutAura(target, 0, GetTristateValueInt32(debuffs.DemoralizingShout, 0, 5)))
 	}
 	if debuffs.HuntersMark != proto.TristateEffect_TristateEffectMissing {
-		MakePermanent(HuntersMarkAura(target, GetTristateValueInt32(debuffs.HuntersMark, 0, 5)))
+		HuntersMarkAura(target)
 	}
 
 	// Atk spd reduction
@@ -493,18 +489,24 @@ func JudgementOfTheCrusaderAura(caster *Unit, target *Unit, mult float64, extraB
 
 func CurseOfElementsAura(target *Unit) *Aura {
 	resistance := 75.0
-	dmgMod := 1.1
+	dmgMod := 1.10
 
 	aura := target.GetOrRegisterAura(Aura{
 		Label:    "Curse of Elements",
-		ActionID: ActionID{SpellID: 11722},
+		ActionID: ActionID{SpellID: 1311680},
 		Duration: time.Minute * 5,
 	})
-	spellSchoolDamageEffect(aura, stats.SchoolIndexFire, dmgMod, 0.0, false)
-	spellSchoolDamageEffect(aura, stats.SchoolIndexFrost, dmgMod, 0.0, false)
 
-	spellSchoolResistanceEffect(aura, stats.SchoolIndexFire, resistance, 0.0, false)
-	spellSchoolResistanceEffect(aura, stats.SchoolIndexFrost, resistance, 0.0, false)
+	for _, school := range []stats.SchoolIndex{
+		stats.SchoolIndexArcane,
+		stats.SchoolIndexFire,
+		stats.SchoolIndexFrost,
+		stats.SchoolIndexNature,
+		stats.SchoolIndexShadow,
+	} {
+		spellSchoolDamageEffect(aura, school, dmgMod, 0.0, false)
+		spellSchoolResistanceEffect(aura, school, resistance, 0.0, false)
+	}
 
 	return aura
 }
@@ -791,10 +793,8 @@ func CurseOfWeaknessAura(target *Unit, points int32) *Aura {
 
 const HuntersMarkAuraTag = "HuntersMark"
 
-func HuntersMarkAura(target *Unit, points int32) *Aura {
+func HuntersMarkAura(target *Unit) *Aura {
 	bonus := 110.0
-
-	bonus *= 1 + 0.03*float64(points)
 
 	aura := target.GetOrRegisterAura(Aura{
 		Label:    "HuntersMark-" + strconv.Itoa(int(bonus)),

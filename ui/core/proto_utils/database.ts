@@ -10,7 +10,6 @@ const dbUrlJson = '/classic/assets/database/db.json';
 const dbUrlBin = '/classic/assets/database/db.bin';
 const leftoversUrlJson = '/classic/assets/database/leftover_db.json';
 const leftoversUrlBin = '/classic/assets/database/leftover_db.bin';
-// When changing this value, don't forget to change the html <link> for preloading!
 const READ_JSON = true;
 const RANK_REGEX = /Rank ([0-9]+)/g;
 const REQ_LEVEL_ITEMS_REGEX = /\<!\-\-rlvl\-\-\>([0-9]+)/g;
@@ -45,7 +44,6 @@ export class Database {
 		}
 	}
 
-	// Checks if any items in the equipment are missing from the current DB. If so, loads the leftover DB.
 	static async loadLeftoversIfNecessary(equipment: EquipmentSpec): Promise<Database> {
 		const db = await Database.get();
 		if (db.loadedLeftovers) {
@@ -77,7 +75,6 @@ export class Database {
 		this.loadProto(db);
 	}
 
-	// Add all data from the db proto into this database.
 	private loadProto(db: UIDatabase) {
 		db.items.forEach(item => this.items.set(item.id, item));
 		db.randomSuffixes.forEach(randomSuffix => this.randomSuffixes.set(randomSuffix.id, randomSuffix));
@@ -171,8 +168,6 @@ export class Database {
 	}
 
 	lookupEquipmentSpec(equipSpec: EquipmentSpec): Gear {
-		// EquipmentSpec is supposed to be indexed by slot, but here we assume
-		// it isn't just in case.
 		const gearMap: Partial<Record<ItemSlot, EquippedItem | null>> = {};
 
 		equipSpec.items.forEach(itemSpec => {
@@ -251,22 +246,27 @@ export class Database {
 	private static async getWowheadTooltipData(id: number, tooltipPostfix: string): Promise<IconData> {
 		if (id === 0) return IconData.create();
 
-		const url = `https://nether.wowhead.com/classic/tooltip/${tooltipPostfix}/${id}?lvl=${MAX_CHARACTER_LEVEL}`;
+		const useForever = tooltipPostfix === 'spell' && id >= 400000;
+			const url = useForever
+				? `https://nether.wowhead.com/forever/tooltip/spell/${id}`
+				: `https://nether.wowhead.com/classic/tooltip/${tooltipPostfix}/${id}?lvl=${MAX_CHARACTER_LEVEL}`;
+
 		try {
 			const response = await fetch(url);
 			const json = await response.json();
 			let rank = 0;
-
-			if (tooltipPostfix === 'spell') {
-				const rankMatches = Array.from(json['tooltip'].matchAll(RANK_REGEX) as RegExpMatchArray[]);
-				rank = rankMatches.length ? parseInt(rankMatches[0][1]) : 0;
+			const tip = json && json['tooltip'];
+						if (tooltipPostfix === 'spell' && typeof tip === 'string') {
+				const rankMatches = [...tip.matchAll(RANK_REGEX)];
+				if (rankMatches.length) {
+					rank = parseInt(rankMatches[0][1]);
+				}
 			}
-
 			return IconData.create({
 				id: id,
-				name: json['name'],
-				icon: json['icon'],
-				hasBuff: json['buff'] !== '',
+				name: json['name'] || '',
+				icon: json['icon'] || '',
+				hasBuff: !!(json['buff']),
 				rank: rank,
 			});
 		} catch (e) {

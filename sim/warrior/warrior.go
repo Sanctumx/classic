@@ -97,6 +97,8 @@ type Warrior struct {
 	Whirlwind         *WarriorSpell
 	WhirlwindOH       *WarriorSpell
 	DeepWounds        *WarriorSpell
+	DeepWoundsSpell   *core.Spell
+	deepWoundsTick    float64
 	ConcussionBlow    *WarriorSpell
 	Hamstring         *WarriorSpell
 

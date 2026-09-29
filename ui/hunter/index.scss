@@ -1,0 +1,10 @@
+.hunter-sim-ui {
+	.dropdown-menu,
+	.autocomplete-dropdown,
+	.picker-menu,
+	.enum-picker-popup,
+	.action-id-picker-popup {
+		position: fixed !important;
+		z-index: 10000 !important;
+	}
+}

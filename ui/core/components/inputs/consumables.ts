@@ -668,7 +668,10 @@ export const MajorManaPotion: ConsumableInputConfig<Potions> = {
 	actionId: () => ActionId.fromItemId(13444),
 	value: Potions.MajorManaPotion,
 };
-
+export const MajorFrenzyPotion: ConsumableInputConfig<Potions> = {
+	actionId: () => ActionId.fromItemId(13442),
+	value: Potions.MajorFrenzyPotion,
+};
 export const MightRagePotion: ConsumableInputConfig<Potions> = {
 	actionId: () => ActionId.fromItemId(13442),
 	value: Potions.MightyRagePotion,
@@ -737,6 +740,7 @@ export const POTIONS_CONFIG: ConsumableStatOption<Potions>[] = [
 	{ config: MightRagePotion, stats: [] },
 	{ config: GreatRagePotion, stats: [] },
 	{ config: RagePotion, stats: [] },
+	{ config: MajorFrenzyPotion, stats: [] },
 
 	// { config: MagicResistancePotion, stats: [] },
 	{ config: GreaterStoneshieldPotion, stats: [Stat.StatArmor] },
@@ -823,7 +827,7 @@ export const Windfury: ConsumableInputConfig<WeaponImbue> = {
 	actionId: () => ActionId.fromSpellId(10614),
 	value: WeaponImbue.Windfury,
 	showWhen: player => {
-		return (player.getFaction() === Faction.Horde) && !player.isSpec(Spec.SpecFeralDruid)
+		return !player.isSpec(Spec.SpecFeralDruid)
 	},
 };
 
@@ -1004,7 +1008,6 @@ const SHAMAN_IMBUES = (slot: ItemSlot): ConsumableStatOption<WeaponImbue>[] => [
 	{ config: RockbiterWeaponImbue(slot), stats: [] },
 	{ config: FlametongueWeaponImbue(slot), stats: [] },
 	{ config: FrostbrandWeaponImbue(slot), stats: [] },
-	{ config: WindfuryWeaponImbue(slot), stats: [] },
 ];
 
 const ROGUE_IMBUES: ConsumableStatOption<WeaponImbue>[] = [

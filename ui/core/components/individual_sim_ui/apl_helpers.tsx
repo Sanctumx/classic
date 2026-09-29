@@ -13,6 +13,10 @@ import { AdaptiveStringPicker } from '../inputs/string_picker';
 import { NumberPicker, NumberPickerConfig } from '../number_picker';
 import { UnitPicker, UnitPickerConfig, UnitValue } from '../unit_picker';
 
+function escapeRegex(s: string) {
+	return (s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export type ACTION_ID_SET =
 	| 'auras'
 	| 'stackable_auras'
@@ -35,7 +39,7 @@ const actionIdSets: Record<
 		getActionIDs: async metadata => {
 			return metadata.getAuras().map(actionId => {
 				const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-				const rankedNameRegex = new RegExp(`${baseActionName} \\(Rank [0-9]+\\)`);
+				const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
 				const hasRanks = metadata.getAuras().filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 				return {
 					value: actionId.id,
@@ -52,7 +56,7 @@ const actionIdSets: Record<
 				.filter(aura => aura.data.maxStacks > 0)
 				.map(actionId => {
 					const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-					const rankedNameRegex = new RegExp(`${baseActionName} \\(Rank [0-9]+\\)`);
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
 					const hasRanks = metadata.getAuras().filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 					return {
 						value: actionId.id,
@@ -69,7 +73,7 @@ const actionIdSets: Record<
 				.filter(aura => aura.data.hasIcd)
 				.map(actionId => {
 					const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-					const rankedNameRegex = new RegExp(`${baseActionName} \\(Rank [0-9]+\\)`);
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
 					const hasRanks = metadata.getAuras().filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 					return {
 						value: actionId.id,
@@ -86,7 +90,7 @@ const actionIdSets: Record<
 				.filter(aura => aura.data.hasExclusiveEffect)
 				.map(actionId => {
 					const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-					const rankedNameRegex = new RegExp(`${baseActionName} \\(Rank [0-9]+\\)`);
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
 					const hasRanks = metadata.getAuras().filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 					return {
 						value: actionId.id,
@@ -100,7 +104,6 @@ const actionIdSets: Record<
 		getActionIDs: async metadata => {
 			const castableSpells = metadata.getSpells().filter(spell => spell.data.isCastable);
 
-			// Split up non-cooldowns and cooldowns into separate sections for easier browsing.
 			const { spells: spells, cooldowns: cooldowns } = bucket(castableSpells, spell => (spell.data.isMajorCooldown ? 'cooldowns' : 'spells'));
 
 			const placeholders: Array<[OtherAction, string]> = [
@@ -119,9 +122,8 @@ const actionIdSets: Record<
 				],
 				(spells || []).map(actionId => {
 					const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-					// Escape "("" and ")" used to denote (DoT)
-					const rankedNameRegex = new RegExp(`${baseActionName.replace('(', '\\(').replace(')', '\\)')} \\(Rank [0-9]+\\)`);
-					const hasRanks = spells.filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
+					const hasRanks = (spells || []).filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 
 					return {
 						value: actionId.id,
@@ -141,10 +143,9 @@ const actionIdSets: Record<
 					},
 				],
 				(cooldowns || []).map(actionId => {
-					// This regex also captures the percentages used in the custom Berserking cooldowns
 					const baseActionName = actionId.id.name.replace(/ \([\w\s%]+\)/g, '');
-					const rankedNameRegex = new RegExp(`${baseActionName} \\(Rank [0-9]+\\)`);
-					const hasRanks = cooldowns.filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
+					const hasRanks = (cooldowns || []).filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 					return {
 						value: actionId.id,
 						submenu: hasRanks ? ['Cooldowns', baseActionName] : ['Cooldowns'],
@@ -180,7 +181,7 @@ const actionIdSets: Record<
 				.filter(spell => spell.data.isCastable && spell.data.isChanneled)
 				.map(actionId => {
 					const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-					const rankedNameRegex = new RegExp(`${baseActionName} \\(Rank [0-9]+\\)`);
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
 					const hasRanks = metadata.getSpells().filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 					return {
 						value: actionId.id,
@@ -197,8 +198,7 @@ const actionIdSets: Record<
 				.filter(spell => spell.data.hasDot)
 				.map(actionId => {
 					const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-					// Escape "("" and ")" used to denote (DoT)
-					const rankedNameRegex = new RegExp(`${baseActionName.replace('(', '\\(').replace(')', '\\)')} \\(Rank [0-9]+\\)`);
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
 					const hasRanks = metadata.getSpells().filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 					return {
 						value: actionId.id,
@@ -215,7 +215,7 @@ const actionIdSets: Record<
 				.filter(spell => spell.data.hasShield)
 				.map(actionId => {
 					const baseActionName = actionId.id.name.replace(/ \(Rank \d+\)/g, '');
-					const rankedNameRegex = new RegExp(`${baseActionName} \\(Rank [0-9]+\\)`);
+					const rankedNameRegex = new RegExp(`${escapeRegex(baseActionName)} \\(Rank [0-9]+\\)`);
 					const hasRanks = metadata.getSpells().filter(spell => !!spell.id.name.match(rankedNameRegex)).length > 1;
 					return {
 						value: actionId.id,
@@ -285,39 +285,48 @@ export class APLActionIDPicker extends DropdownPicker<Player<any>, ActionID, Act
 			config.defaultUnitRef == 'self' ? UnitReference.create({ type: UnitType.Self }) : UnitReference.create({ type: UnitType.CurrentTarget });
 		const getActionIDs = actionIdSet.getActionIDs;
 		const updateValues = async () => {
-			const unitRef = getUnitRef(player);
-			const metadata = player.sim.getUnitMetadata(unitRef, player, defaultRef);
-			if (metadata) {
+			let unitRef = getUnitRef(player);
+			if (!unitRef || unitRef.type == UnitType.Unknown) {
+				unitRef = defaultRef;
+			}
+			const metadata =
+				player.sim.getUnitMetadata(unitRef, player, defaultRef) || player.sim.getUnitMetadata(defaultRef, player, defaultRef);
+			if (!metadata) {
+				return;
+			}
+			try {
 				const values = await getActionIDs(metadata);
 				this.setOptions(values);
+			} catch (e) {
+				console.error('getActionIDs failed', e);
 			}
 		};
 		updateValues();
 		const unitMetaEvent = player.sim.unitMetadataEmitter.on(updateValues);
 		const rotationChangeEvent = player.rotationChangeEmitter.on(updateValues);
+		const statsEvent = player.currentStatsEmitter.on(updateValues);
 		this.addOnDisposeCallback(() => {
 			unitMetaEvent.dispose();
 			rotationChangeEvent.dispose();
+			statsEvent.dispose();
 		});
 	}
 }
 
-// TODO: remove once APLs for classes are updated
 export interface APLRunePickerConfig<ModObject>
 	extends Omit<DropdownPickerConfig<ModObject, ActionID, null>, 'defaultLabel' | 'equals' | 'setOptionContent' | 'values' | 'getValue' | 'setValue'> {
 	getValue: (obj: ModObject) => ActionID;
 	setValue: (eventID: EventID, obj: ModObject, newValue: ActionID) => void;
 }
 
-// TODO: remove once APLs for classes are updated
 export class APLRunePicker extends DropdownPicker<Player<any>, ActionID, null> {
 	constructor(parent: HTMLElement, player: Player<any>, config: APLRunePickerConfig<Player<any>>) {
 		super(parent, player, {
 			...config,
-			sourceToValue: (src: ActionID) => {
+			sourceToValue: (_src: ActionID) => {
 				return null;
 			},
-			valueToSource: (val: null) => {
+			valueToSource: (_val: null) => {
 				return ActionID.create({
 					rawId: {
 						oneofKind: 'spellId',
@@ -327,16 +336,15 @@ export class APLRunePicker extends DropdownPicker<Player<any>, ActionID, null> {
 			},
 			defaultLabel: 'Runes',
 			equals: (a, b) => a == b,
-			setOptionContent: (button, valueConfig) => {
+			setOptionContent: (button, _valueConfig) => {
 				const actionId = ActionId.fromSpellId(0);
 				const iconElem = document.createElement('a');
 				iconElem.classList.add('apl-actionid-item-icon');
 				iconElem.dataset.whtticon = 'false';
-				iconElem.classList.add('apl-actionid-item-icon');
 				actionId.fillAndSet(iconElem, true, true);
 				button.appendChild(iconElem);
 
-				const textElem = document.createTextNode("");
+				const textElem = document.createTextNode('');
 				button.appendChild(textElem);
 			},
 			values: [],
@@ -355,7 +363,6 @@ export type UNIT_SET = 'aura_sources' | 'aura_sources_targets_first' | 'targets'
 const unitSets: Record<
 	UNIT_SET,
 	{
-		// Uses target icon by default instead of person icon. This should be set to true for inputs that default to CurrentTarget.
 		targetUI?: boolean;
 		getUnits: (player: Player<any>) => Array<UnitReference | undefined>;
 	}
@@ -444,11 +451,11 @@ export class APLUnitPicker extends UnitPicker<Player<any>> {
 				text: 'Current Target',
 			};
 		} else if (ref.type == UnitType.Player) {
-			const player = thisPlayer.sim.raid.getPlayer(ref.index);
-			if (player) {
+			const p = thisPlayer.sim.raid.getPlayer(ref.index);
+			if (p) {
 				return {
 					value: ref,
-					iconUrl: player.getSpecIcon(),
+					iconUrl: p.getSpecIcon(),
 					text: `Player ${ref.index + 1}`,
 				};
 			}
@@ -624,7 +631,6 @@ export function actionIdFieldConfig(
 	};
 }
 
-// TODO: remove once APLs for classes are updated
 export function runeFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
 	return {
 		field: field,
@@ -702,75 +708,6 @@ export function stringFieldConfig(field: string, options?: Partial<APLPickerBuil
 		...(options || {}),
 	};
 }
-
-/*
-export function runeTypeFieldConfig(field: string, includeDeath: boolean): APLPickerBuilderFieldConfig<any, any> {
-
-       let values = [
-
-		{ value: APLValueRuneType.RuneBlood, label: 'Blood' },
-		{ value: APLValueRuneType.RuneFrost, label: 'Frost' },
-		{ value: APLValueRuneType.RuneUnholy, label: 'Unholy' },
-
-	]
-
-	if (includeDeath) {
-		//values.push({ value: APLValueRuneType.RuneDeath, label: 'Death' })
-	}
-
-	return {
-		field: field,
-		//newValue: () => APLValueRuneType.RuneBlood,
-		factory: (parent, player, config) => new TextDropdownPicker(parent, player, {
-			...config,
-			defaultLabel: 'None',
-			equals: (a, b) => a == b,
-			values: values,
-		}),
-	};
-
-}
-
-export function runeSlotFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
-	return {
-		field: field,
-		newValue: () => APLValueRuneSlot.SlotLeftBlood,
-		factory: (parent, player, config) => new TextDropdownPicker(parent, player, {
-			...config,
-			defaultLabel: 'None',
-			equals: (a, b) => a == b,
-			values: [
-				{ value: APLValueRuneSlot.SlotLeftBlood, label: 'Blood Left' },
-				{ value: APLValueRuneSlot.SlotRightBlood, label: 'Blood Right' },
-				{ value: APLValueRuneSlot.SlotLeftFrost, label: 'Frost Left' },
-				{ value: APLValueRuneSlot.SlotRightFrost, label: 'Frost Right' },
-				{ value: APLValueRuneSlot.SlotLeftUnholy, label: 'Unholy Left' },
-				{ value: APLValueRuneSlot.SlotRightUnholy, label: 'Unholy Right' },
-			],
-		}),
-
-	};
-}
-
-export function rotationTypeFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
-	let values = [
-		{ value: FeralDruid_Rotation_AplType.SingleTarget, label: 'Single Target' },
-		{ value: FeralDruid_Rotation_AplType.Aoe, label: 'AOE' },
-	]
-
-	return {
-		field: field,
-		label: 'Type',
-		newValue: () => FeralDruid_Rotation_AplType.SingleTarget,
-		factory: (parent, player, config) => new TextDropdownPicker(parent, player, {
-			...config,
-			defaultLabel: 'Single Target',
-			equals: (a, b) => a == b,
-			values: values,
-		}),
-	};
-}
-*/
 
 export function aplInputBuilder<T>(
 	newValue: () => T,

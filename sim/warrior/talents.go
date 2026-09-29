@@ -14,6 +14,7 @@ func (warrior *Warrior) ToughnessArmorMultiplier() float64 {
 }
 
 func (warrior *Warrior) ApplyTalents() {
+	fmt.Printf("DeepWounds=%d\n", warrior.Talents.DeepWounds)
 	warrior.AddStat(stats.MeleeCrit, core.CritRatingPerCritChance*1*float64(warrior.Talents.Cruelty))
 	warrior.ApplyEquipScaling(stats.Armor, warrior.ToughnessArmorMultiplier())
 	warrior.AddStat(stats.Defense, 2*float64(warrior.Talents.Anticipation))
@@ -27,6 +28,10 @@ func (warrior *Warrior) ApplyTalents() {
 	warrior.applyUnbridledWrath()
 	warrior.applyDualWieldSpecialization()
 	warrior.applyEnrage()
+	fmt.Printf("Go Precision=%d DWS=%d Cruelty=%d\n",
+		warrior.Talents.Precision,
+		warrior.Talents.DualWieldSpecialization,
+		warrior.Talents.Cruelty)
 	warrior.applyPrecision()
 	warrior.applyRagingBlows()
 	warrior.applyFlurry()

@@ -1,15 +1,14 @@
 package hunter
 
 import (
-	"time"
-
+	"fmt"
 	"github.com/wowsims/classic/sim/common/guardians"
 	"github.com/wowsims/classic/sim/core"
 	"github.com/wowsims/classic/sim/core/proto"
 	"github.com/wowsims/classic/sim/core/stats"
 )
 
-var TalentTreeSizes = [3]int{16, 14, 16}
+var TalentTreeSizes = [3]int{16, 16, 18}
 
 const (
 	SpellFlagShot   = core.SpellFlagAgentReserved1
@@ -21,29 +20,23 @@ const (
 const (
 	SpellCode_HunterNone int32 = iota
 
-	// Shots
 	SpellCode_HunterAimedShot
 	SpellCode_HunterArcaneShot
 	SpellCode_HunterMultiShot
 
-	// Strikes
 	SpellCode_HunterRaptorStrike
 	SpellCode_HunterRaptorStrikeHit
 
-	// Stings
 	SpellCode_HunterSerpentSting
 
-	// Traps
 	SpellCode_HunterExplosiveTrap
 	SpellCode_HunterFreezingTrap
 	SpellCode_HunterImmolationTrap
 
-	// Other
 	SpellCode_HunterMongooseBite
 	SpellCode_HunterWingClip
 	SpellCode_HunterVolley
 
-	// Pet Spells
 	SpellCode_HunterPetClaw
 	SpellCode_HunterPetBite
 	SpellCode_HunterPetLightningBreath
@@ -79,8 +72,8 @@ type Hunter struct {
 	AmmoDPS                   float64
 	AmmoDamageBonus           float64
 	NormalizedAmmoDamageBonus float64
+	quiverBonus               float64
 
-	// Miscellaneous set bonuses that require extra logic inside of spells
 	AspectOfTheHawkAPMultiplier float64
 
 	curQueueAura       *core.Aura
@@ -102,17 +95,23 @@ type Hunter struct {
 	SilencingShot   *core.Spell
 	Volley          *core.Spell
 	WingClip        *core.Spell
+	SniperShot      *core.Spell
+	StriderKick     *core.Spell
+	SummonHawk      *core.Spell
+	activeHawks     int32
+	LaceratingBleed *core.Spell
 
 	Shots       []*core.Spell
 	Strikes     []*core.Spell
 	MeleeSpells []*core.Spell
 	LastShot    *core.Spell
 
-	// The aura that allows you to cast Mongoose Bite
-	DefensiveState *core.Aura
-
+	DefensiveState      *core.Aura
 	RapidFireAura       *core.Aura
 	BestialWrathPetAura *core.Aura
+	QuickShotsAura      *core.Aura
+	rapidRecupAura      *core.Aura
+	ExposePreyAura      *core.Aura
 }
 
 func (hunter *Hunter) GetCharacter() *core.Character {
@@ -130,6 +129,9 @@ func (hunter *Hunter) AddPartyBuffs(_ *proto.PartyBuffs) {
 }
 
 func (hunter *Hunter) Initialize() {
+	hunter.registerAspectOfTheHawkSpell()
+	hunter.registerAspectOfTheBeastSpell()
+
 	hunter.OnSpellRegistered(func(spell *core.Spell) {
 		if spell.Flags.Matches(SpellFlagShot) {
 			hunter.Shots = append(hunter.Shots, spell)
@@ -146,51 +148,53 @@ func (hunter *Hunter) Initialize() {
 		}
 	})
 
-	hunter.registerAspectOfTheHawkSpell()
-
 	multiShotTimer := hunter.NewTimer()
 	arcaneShotTimer := hunter.NewTimer()
 
 	hunter.registerSerpentStingSpell()
-
 	hunter.registerArcaneShotSpell(arcaneShotTimer)
-	hunter.registerAimedShotSpell(arcaneShotTimer)
+	hunter.registerAimedShotSpell(multiShotTimer)
 	hunter.registerMultiShotSpell(multiShotTimer)
-
+	hunter.registerSniperShotSpell()
+	hunter.registerSummonHawkSpell(arcaneShotTimer)
+	hunter.registerStriderKickSpell()
 	hunter.registerRaptorStrikeSpell()
 	hunter.registerMongooseBiteSpell()
 	hunter.registerWingClipSpell()
 	hunter.registerVolleySpell()
 
 	traps := hunter.NewTimer()
-
 	hunter.registerExplosiveTrapSpell(traps)
 	hunter.registerImmolationTrapSpell(traps)
 	hunter.registerFreezingTrapSpell(traps)
-
 	hunter.registerRapidFire()
+	fmt.Printf("hunter spells shot=%d sting=%v sniper=%v multi=%v\n",
+		len(hunter.Shots),
+		hunter.SerpentSting != nil,
+		hunter.SniperShot != nil,
+		hunter.MultiShot != nil)
 }
 
 func (hunter *Hunter) Reset(sim *core.Simulation) {
+	hunter.activeHawks = 0
 }
 
 func NewHunter(character *core.Character, options *proto.Player) *Hunter {
 	hunterOptions := options.GetHunter()
 
 	hunter := &Hunter{
-		Character: *character,
-		Talents:   &proto.HunterTalents{},
-		Options:   hunterOptions.Options,
+		Character:   *character,
+		Talents:     &proto.HunterTalents{},
+		Options:     hunterOptions.Options,
+		quiverBonus: 1.0,
 	}
 	core.FillTalentsProto(hunter.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
 	hunter.EnableManaBar()
-
 	hunter.PseudoStats.CanParry = true
 
 	rangedWeapon := hunter.WeaponFromRanged()
 
 	if hunter.HasRangedWeapon() {
-		// Ammo
 		switch hunter.Options.Ammo {
 		case proto.Hunter_Options_RazorArrow:
 			hunter.AmmoDPS = 7.5
@@ -220,20 +224,22 @@ func NewHunter(character *core.Character, options *proto.Player) *Hunter {
 		hunter.AmmoDamageBonus = hunter.AmmoDPS * rangedWeapon.SwingSpeed
 		hunter.NormalizedAmmoDamageBonus = hunter.AmmoDPS * 2.8
 
-		// Quiver
 		switch hunter.Options.QuiverBonus {
 		case proto.Hunter_Options_Speed10:
-			hunter.PseudoStats.RangedSpeedMultiplier *= 1.1
+			hunter.quiverBonus = 1.10
 		case proto.Hunter_Options_Speed11:
-			hunter.PseudoStats.RangedSpeedMultiplier *= 1.11
+			hunter.quiverBonus = 1.11
 		case proto.Hunter_Options_Speed12:
-			hunter.PseudoStats.RangedSpeedMultiplier *= 1.12
+			hunter.quiverBonus = 1.12
 		case proto.Hunter_Options_Speed13:
-			hunter.PseudoStats.RangedSpeedMultiplier *= 1.13
+			hunter.quiverBonus = 1.13
 		case proto.Hunter_Options_Speed14:
-			hunter.PseudoStats.RangedSpeedMultiplier *= 1.14
+			hunter.quiverBonus = 1.14
 		case proto.Hunter_Options_Speed15:
-			hunter.PseudoStats.RangedSpeedMultiplier *= 1.15
+			hunter.quiverBonus = 1.15
+		}
+		if hunter.quiverBonus > 1 {
+			hunter.PseudoStats.RangedSpeedMultiplier *= hunter.quiverBonus
 		}
 	}
 
@@ -247,34 +253,24 @@ func NewHunter(character *core.Character, options *proto.Player) *Hunter {
 	})
 
 	hunter.AutoAttacks.RangedConfig().Flags |= core.SpellFlagCastTimeNoGCD
-	hunter.AutoAttacks.RangedConfig().Cast = core.CastConfig{
-		DefaultCast: core.Cast{
-			CastTime: time.Millisecond * 500,
-		},
-		ModifyCast: func(_ *core.Simulation, spell *core.Spell, cast *core.Cast) {
-			cast.CastTime = spell.CastTime()
-		},
-		IgnoreHaste: true, // Hunter GCD is locked at 1.5s
-		CastTime: func(spell *core.Spell) time.Duration {
-			return time.Duration(float64(spell.DefaultCast.CastTime) / hunter.RangedSwingSpeed())
-		},
-	}
-	hunter.AutoAttacks.RangedConfig().ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
-		return !hunter.IsCasting(sim)
-	}
+	hunter.AutoAttacks.RangedConfig().Flags |= core.SpellFlagMeleeMetrics
 	hunter.AutoAttacks.RangedConfig().CritDamageBonus = hunter.mortalShots()
 	hunter.AutoAttacks.RangedConfig().BonusCoefficient = 1
 	hunter.AutoAttacks.RangedConfig().ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		baseDamage := hunter.RangedWeaponDamage(sim, spell.RangedAttackPower(target, false)) +
 			hunter.AmmoDamageBonus
 		result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
-
 		spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 			spell.DealDamage(sim, result)
 		})
 	}
 
-	hunter.pet = hunter.NewHunterPet()
+	if hunter.Talents.LoneWolf {
+		hunter.pet = nil
+		hunter.PseudoStats.DamageDealtMultiplier *= 1.20
+	} else {
+		hunter.pet = hunter.NewHunterPet()
+	}
 
 	hunter.AddStatDependency(stats.Strength, stats.AttackPower, core.APPerStrength[character.Class])
 	hunter.AddStatDependency(stats.Agility, stats.AttackPower, 1)
@@ -283,14 +279,12 @@ func NewHunter(character *core.Character, options *proto.Player) *Hunter {
 	hunter.AddStatDependency(stats.Intellect, stats.SpellCrit, core.CritPerIntAtLevel[character.Class]*core.SpellCritRatingPerCritChance)
 
 	guardians.ConstructGuardians(&hunter.Character)
-
 	return hunter
 }
 
 func (hunter *Hunter) OnGCDReady(_ *core.Simulation) {
 }
 
-// Agent is a generic way to access underlying hunter on any of the agents.
 type HunterAgent interface {
 	GetHunter() *Hunter
 }

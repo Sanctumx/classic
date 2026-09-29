@@ -45,6 +45,8 @@ func (warrior *Warrior) registerBloodthirstSpell(cdTimer *core.Timer) {
 			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 			if !result.Landed() {
 				spell.IssueRefund(sim)
+			} else {
+				warrior.procDeepWounds(sim, target, false)
 			}
 		},
 	})

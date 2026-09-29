@@ -9,9 +9,9 @@ import (
 
 func (hunter *Hunter) getAimedShotConfig(rank int, timer *core.Timer) core.SpellConfig {
 	spellId := [7]int32{0, 19434, 20900, 20901, 20902, 20903, 20904}[rank]
-	baseDamage := [7]float64{0, 70, 125, 200, 330, 460, 600}[rank]
+	baseDamage := [7]float64{0, 20, 40, 70, 100, 130, 166}[rank]
 	manaCost := [7]float64{0, 75, 115, 160, 210, 260, 310}[rank]
-	level := [7]int{0, 0, 28, 36, 44, 52, 60}[rank]
+	level := [7]int{0, 20, 28, 36, 44, 52, 60}[rank]
 
 	return core.SpellConfig{
 		SpellCode:     SpellCode_HunterAimedShot,
@@ -31,19 +31,22 @@ func (hunter *Hunter) getAimedShotConfig(rank int, timer *core.Timer) core.Spell
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
 				GCD:      core.GCDDefault,
-				CastTime: time.Millisecond * 3500,
+				CastTime: time.Millisecond * 2500,
 			},
 			CD: core.Cooldown{
 				Timer:    timer,
 				Duration: time.Second * 6,
 			},
+			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
-				cast.CastTime = spell.CastTime()
-				hunter.Unit.AutoAttacks.CancelAutoSwing(sim)
-			},
-			IgnoreHaste: true, // Hunter GCD is locked at 1.5s
-			CastTime: func(spell *core.Spell) time.Duration {
-				return time.Duration(float64(spell.DefaultCast.CastTime) / hunter.RangedSwingSpeed())
+				mult := hunter.PseudoStats.RangedSpeedMultiplier
+				if hunter.quiverBonus > 1 {
+					mult /= hunter.quiverBonus
+				}
+				if mult < 0.01 {
+					mult = 1
+				}
+				cast.CastTime = time.Duration(float64(time.Millisecond*2500) / mult)
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -62,7 +65,6 @@ func (hunter *Hunter) getAimedShotConfig(rank int, timer *core.Timer) core.Spell
 				baseDamage
 
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
-			hunter.Unit.AutoAttacks.EnableAutoSwing(sim)
 			spell.WaitTravelTime(sim, func(s *core.Simulation) {
 				spell.DealDamage(sim, result)
 			})
@@ -71,15 +73,9 @@ func (hunter *Hunter) getAimedShotConfig(rank int, timer *core.Timer) core.Spell
 }
 
 func (hunter *Hunter) registerAimedShotSpell(timer *core.Timer) {
-	if !hunter.Talents.AimedShot {
-		return
-	}
-
 	maxRank := 6
-
 	for i := 1; i <= maxRank; i++ {
 		config := hunter.getAimedShotConfig(i, timer)
-
 		if config.RequiredLevel <= int(hunter.Level) {
 			hunter.AimedShot = hunter.GetOrRegisterSpell(config)
 		}

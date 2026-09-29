@@ -84,21 +84,17 @@ export const buildWowheadTooltipDataset = async (options: WowheadTooltipItemPara
 	const lang = getLanguageCode();
 	const params = new URLSearchParams();
 	const langPrefix = lang ? lang + '.' : '';
-	params.set('domain', `${langPrefix}classic`);
-	params.set('dataEnv', String(WOWHEAD_EXPANSION_ENV));
+	//params.set('domain', `${langPrefix}classic`);
+	//params.set('dataEnv', String(WOWHEAD_EXPANSION_ENV));
 
 	if (options.level) {
 		params.set('lvl', String(options.level || MAX_CHARACTER_LEVEL));
 	}
 
-	if ('spellId' in options) {
-		if (options.spellId) {
-			params.set('spell', String(options.spellId));
-		}
-		if (options.useBuffAura) {
-			const data = await Database.getSpellIconData(options.spellId);
-			if (data.hasBuff) params.set('buff', '1');
-		}
+	if ('spellId' in options && options.spellId >= 400000) {
+		params.set('domain', 'forever');
+	} else {
+		params.set('domain', `${langPrefix}classic`);
 	}
 
 	if ('itemId' in options) {

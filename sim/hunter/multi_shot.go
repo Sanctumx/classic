@@ -37,16 +37,12 @@ func (hunter *Hunter) getMultiShotConfig(rank int, timer *core.Timer) core.Spell
 				CastTime: time.Millisecond * 500,
 			},
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
-				cast.CastTime = spell.CastTime()
-				hunter.Unit.AutoAttacks.CancelAutoSwing(sim)
+				cast.CastTime = time.Millisecond * 500
 			},
-			IgnoreHaste: true, // Hunter GCD is locked at 1.5s
+			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    timer,
-				Duration: time.Second * 10,
-			},
-			CastTime: func(spell *core.Spell) time.Duration {
-				return time.Duration(float64(spell.DefaultCast.CastTime) / hunter.RangedSwingSpeed())
+				Duration: time.Second * 6,
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -55,7 +51,7 @@ func (hunter *Hunter) getMultiShotConfig(rank int, timer *core.Timer) core.Spell
 
 		CritDamageBonus: hunter.mortalShots(),
 
-		DamageMultiplier: 1 + .05*float64(hunter.Talents.Barrage),
+		DamageMultiplier: 1 + hunter.barrageBonus(),
 		ThreatMultiplier: 1,
 		BonusCoefficient: 1,
 
@@ -71,7 +67,6 @@ func (hunter *Hunter) getMultiShotConfig(rank int, timer *core.Timer) core.Spell
 
 				curTarget = sim.Environment.NextTargetUnit(curTarget)
 			}
-			hunter.Unit.AutoAttacks.EnableAutoSwing(sim)
 			spell.WaitTravelTime(sim, func(s *core.Simulation) {
 				for hitIndex := int32(0); hitIndex < numHits; hitIndex++ {
 					spell.DealDamage(sim, results[hitIndex])
@@ -79,7 +74,7 @@ func (hunter *Hunter) getMultiShotConfig(rank int, timer *core.Timer) core.Spell
 					curTarget = sim.Environment.NextTargetUnit(curTarget)
 				}
 			})
-			
+
 		},
 	}
 }

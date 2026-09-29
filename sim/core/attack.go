@@ -309,13 +309,23 @@ func (wa *WeaponAttack) castExtraAttacks(sim *Simulation, numExtraAttacks int32,
 }
 
 func (wa *WeaponAttack) swing(sim *Simulation) time.Duration {
+	if wa.spell != nil && wa.spell.ProcMask.Matches(ProcMaskRangedAuto) {
+		if target := wa.unit.CurrentTarget; target != nil {
+			if !wa.spell.Cast(sim, target) {
+				wa.spell.ApplyEffects(sim, target, wa.spell)
+			}
+		}
+		wa.updateSwingDuration(wa.unit.RangedSwingSpeed())
+		wa.swingAt = sim.CurrentTime + wa.curSwingDuration
+		wa.lastSwingAt = sim.CurrentTime
+		return wa.swingAt
+	}
+
 	isExtraAttack := wa.extraAttacksPending > 0
 
 	if isExtraAttack {
-		// Needs to happen before any attacks gets cast
 		wa.extraAttacks = wa.extraAttacksPending
 		wa.extraAttacksPending = 0
-		// Any further procs will be added to extraAttacksPending to be processed next batch
 	}
 
 	wa.castExtraAttacksStored(sim)
@@ -323,21 +333,13 @@ func (wa *WeaponAttack) swing(sim *Simulation) time.Duration {
 	attackSpell := wa.spell
 
 	if wa.replaceSwing != nil {
-		// Need to check APL here to allow last-moment HS queue casts.
 		wa.unit.Rotation.DoNextAction(sim)
-
-		// Allow MH swing to be overridden for abilities like Heroic Strike.
 		attackSpell = wa.replaceSwing(sim, attackSpell)
 	}
 
 	if attackSpell.CanCast(sim, wa.unit.CurrentTarget) {
-		// Update swing timer BEFORE the cast, so that APL checks for TimeToNextAuto behave correctly
-		// if the attack causes APL evaluations (e.g. from rage gain).
-
 		wa.swingAt = sim.CurrentTime + wa.curSwingDuration
 		wa.lastSwingAt = sim.CurrentTime
-
-		// don't update isExtraAttack here
 
 		var originalCastTime time.Duration
 		if isExtraAttack {
@@ -350,11 +352,30 @@ func (wa *WeaponAttack) swing(sim *Simulation) time.Duration {
 
 		attackSpell.Cast(sim, wa.unit.CurrentTarget)
 
-		moreAttacks := !isExtraAttack && wa.extraAttacksPending > 0 // True if above cast is a normal Auto attack that triggered an Extra Attack
-		wa.castExtraAttacksTriggered(sim, moreAttacks)              // more attacks means we don't count the above cast
+		// Forever: melee restarts Auto Shot from this instant (does not add a full bow cycle).
+
+		if wa.unit.AutoAttacks.AutoSwingRanged &&
+			!attackSpell.ProcMask.Matches(ProcMaskRangedAuto) {
+
+			isWhite := attackSpell.ProcMask.Matches(ProcMaskMeleeMHAuto | ProcMaskMeleeOHAuto)
+			isRaptor := attackSpell.ActionID.SpellID == 14266 ||
+				attackSpell.ActionID.SpellID == 14265 ||
+				attackSpell.ActionID.SpellID == 14264 ||
+				attackSpell.ActionID.SpellID == 2973 && attackSpell.ActionID.Tag == 0
+
+			if isWhite || isRaptor {
+				aa := &wa.unit.AutoAttacks
+				aa.ranged.updateSwingDuration(wa.unit.RangedSwingSpeed())
+				aa.ranged.swingAt = sim.CurrentTime + aa.ranged.curSwingDuration
+				aa.ranged.lastSwingAt = sim.CurrentTime
+				sim.rescheduleWeaponAttack(aa.ranged.swingAt)
+			}
+		}
+
+		moreAttacks := !isExtraAttack && wa.extraAttacksPending > 0
+		wa.castExtraAttacksTriggered(sim, moreAttacks)
 
 		if isExtraAttack {
-			// For ranged extra attacks, we have to wait for the spell to hit before resettings the cast time and metrics split
 			if originalCastTime > 0 {
 				wa.spell.WaitTravelTime(sim, func(sim *Simulation) {
 					wa.spell.DefaultCast.CastTime = originalCastTime
@@ -369,14 +390,13 @@ func (wa *WeaponAttack) swing(sim *Simulation) time.Duration {
 			wa.spell.SetMetricsSplit(1)
 			wa.swingAt = sim.CurrentTime + SpellBatchWindow
 			wa.lastSwingAt = sim.CurrentTime
-			sim.rescheduleWeaponAttack(wa.swingAt) // Required to fix extra attack procs triggered during swing
+			sim.rescheduleWeaponAttack(wa.swingAt)
 		}
 
 		if !sim.Options.Interactive && wa.unit.Rotation != nil {
 			wa.unit.Rotation.DoNextAction(sim)
 		}
 	} else {
-		// Delay till cast finishes if casting or 100 ms if not
 		wa.swingAt = max(wa.unit.Hardcast.Expires, sim.CurrentTime+time.Millisecond*100)
 	}
 
@@ -513,7 +533,7 @@ func (unit *Unit) EnableAutoAttacks(agent Agent, options AutoAttackOptions) {
 		SpellSchool:  options.Ranged.GetSpellSchool(),
 		DefenseType:  DefenseTypeRanged,
 		ProcMask:     ProcMaskRangedAuto,
-		Flags:        SpellFlagMeleeMetrics,
+		Flags:        SpellFlagMeleeMetrics | SpellFlagNoOnCastComplete | SpellFlagPassiveSpell,
 		CastType:     proto.CastType_CastTypeRanged,
 		MissileSpeed: 24,
 
