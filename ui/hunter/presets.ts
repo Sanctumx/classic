@@ -7,7 +7,6 @@ import {
 	Conjured,
 	Consumes,
 	Debuffs,
-	Flask,
 	Food,
 	HealthElixir,
 	IndividualBuffs,
@@ -16,7 +15,6 @@ import {
 	Profession,
 	Race,
 	RaidBuffs,
-	SapperExplosive,
 	SaygesFortune,
 	SpellPowerBuff,
 	StrengthBuff,
@@ -32,63 +30,47 @@ import {
 	Hunter_Options_QuiverBonus,
 } from '../core/proto/hunter.js';
 import { SavedTalents } from '../core/proto/ui.js';
-import P1APL from './apls/p1.apl.json';
-import P0BISGear from './gear_sets/p0.bis.gear.json';
-import P1BISGear from './gear_sets/p1.bis.gear.json';
+import MMWeaveAPL from './apls/MMWeave.apl.json';
+import SurvDWAPL from './apls/SurvDW.apl.json';
+import SurvDWGear from './gear_sets/surv_dw.gear.json';
+import MMWeaveGear from './gear_sets/mm_weave.gear.json';
 
-// Preset options for this spec.
-// Eventually we will import these values for the raid sim too, so its good to
-// keep them in a separate file.
-///////////////////////////////////////////////////////////////////////////
-//                                 Gear Presets
-///////////////////////////////////////////////////////////////////////////
+export const GearMMWeave = PresetUtils.makePresetGear('MM Weave', MMWeaveGear);
+export const GearSurvDW = PresetUtils.makePresetGear('Surv DW', SurvDWGear);
 
-export const GearP0BIS = PresetUtils.makePresetGear('Pre-BiS', P0BISGear);
-export const GearP1BIS = PresetUtils.makePresetGear('P1 BiS', P1BISGear);
 
 export const GearPresets = {
-	[Phase.Phase1]: [GearP0BIS, GearP1BIS],
+	[Phase.Phase1]: [GearSurvDW, GearMMWeave],
 };
 
-export const DefaultGear = GearP0BIS;
+export const APLSurvDW = PresetUtils.makePresetAPLRotation('Surv DW', SurvDWAPL);
+export const APLMMWeave = PresetUtils.makePresetAPLRotation('MM Weave', MMWeaveAPL);
 
-///////////////////////////////////////////////////////////////////////////
-//                                 APL Presets
-///////////////////////////////////////////////////////////////////////////
-
-export const APLP1 = PresetUtils.makePresetAPLRotation('Marksmanship', P1APL);
+export const DefaultGear = GearSurvDW;
 
 export const APLPresets = {
-	[Phase.Phase1]: [APLP1],
+	[Phase.Phase1]: [APLMMWeave, APLSurvDW],
 };
 
-export const DefaultAPL = APLPresets[Phase.Phase1][0];
+export const DefaultAPL = APLSurvDW;
 
-///////////////////////////////////////////////////////////////////////////
-//                                 Talent Presets
-///////////////////////////////////////////////////////////////////////////
-
-// Default talents. Uses the wowhead calculator format, make the talents on
-// https://wowhead.com/classic/talent-calc and copy the numbers in the url.
-
-export const SavedTalentsP1 = PresetUtils.makePresetTalents(
-	'Marksmanship',
-	SavedTalents.create({ talentsString: '' }),
+export const SurvDwHawk = PresetUtils.makePresetTalents(
+	'Surv DW Hawk',
+	SavedTalents.create({ talentsString: '53200005021-005005-5002302300500201' }),
 );
-
+export const SurvDw = PresetUtils.makePresetTalents(
+	'Surv DW',
+	SavedTalents.create({ talentsString: '5-005005201-500230230050222151' }),
+);
+export const MmWeave = PresetUtils.makePresetTalents(
+	'MM Weave',
+	SavedTalents.create({ talentsString: '5-005005201-500230230050222151' }),
+);
 export const TalentPresets = {
-	[Phase.Phase1]: [SavedTalentsP1],
+	[Phase.Phase1]: [SurvDwHawk, SurvDw, MmWeave],
 };
 
-export const DefaultTalents = SavedTalentsP1;
-
-export const DefaultTalentsMarksman = SavedTalentsP1;
-export const DefaultTalentsSurvival = SavedTalentsP1;
-export const DefaultTalentsBeastMastery = SavedTalentsP1;
-
-///////////////////////////////////////////////////////////////////////////
-//                                 Options
-///////////////////////////////////////////////////////////////////////////
+export const DefaultTalents = SurvDwHawk;
 
 export const DefaultOptions = HunterOptions.create({
 	ammo: Ammo.ThoriumHeadedArrow,
@@ -101,22 +83,17 @@ export const DefaultOptions = HunterOptions.create({
 export const DefaultConsumes = Consumes.create({
 	agilityElixir: AgilityElixir.ElixirOfTheMongoose,
 	alcohol: Alcohol.AlcoholRumseyRumBlackLabel,
-	attackPowerBuff: AttackPowerBuff.JujuMight,
+	attackPowerBuff: AttackPowerBuff.WinterfallFirewater,
 	defaultConjured: Conjured.ConjuredDemonicRune,
-	defaultPotion: Potions.MajorManaPotion,
+	defaultPotion: Potions.MajorFrenzyPotion,
 	dragonBreathChili: true,
-	flask: Flask.FlaskOfSupremePower,
 	food: Food.FoodSmokedDesertDumpling,
 	healthElixir: HealthElixir.ElixirOfFortitude,
-	mainHandImbue: WeaponImbue.Windfury,
-	manaRegenElixir: ManaRegenElixir.MagebloodPotion,
+	mainHandImbue: WeaponImbue.ElementalSharpeningStone,
 	offHandImbue: WeaponImbue.ElementalSharpeningStone,
-	petAttackPowerConsumable: 1,
-	petAgilityConsumable: 1,
-	petStrengthConsumable: 1,
-	sapperExplosive: SapperExplosive.SapperUnknown,
+	manaRegenElixir: ManaRegenElixir.MagebloodPotion,
 	spellPowerBuff: SpellPowerBuff.GreaterArcaneElixir,
-	strengthBuff: StrengthBuff.JujuPower,
+	strengthBuff: StrengthBuff.ElixirOfGiants,
 	zanzaBuff: ZanzaBuff.GroundScorpokAssay,
 });
 
@@ -127,40 +104,40 @@ export const DefaultRaidBuffs = RaidBuffs.create({
 	fireResistanceAura: true,
 	fireResistanceTotem: true,
 	giftOfTheWild: TristateEffect.TristateEffectImproved,
-	graceOfAirTotem: TristateEffect.TristateEffectImproved,
-	leaderOfThePack: false,
+	leaderOfThePack: true,
 	manaSpringTotem: TristateEffect.TristateEffectRegular,
 	strengthOfEarthTotem: TristateEffect.TristateEffectImproved,
+	trueshotAura: true,
+	windfuryTotem: true,
 });
 
 export const DefaultIndividualBuffs = IndividualBuffs.create({
 	blessingOfKings: true,
 	blessingOfMight: TristateEffect.TristateEffectImproved,
-	blessingOfWisdom: TristateEffect.TristateEffectImproved,
+	blessingOfWisdom: TristateEffect.TristateEffectRegular,
 	fengusFerocity: false,
 	moldarsMoxie: false,
-	rallyingCryOfTheDragonslayer: true,
-	saygesFortune: SaygesFortune.SaygesDamage,
+	rallyingCryOfTheDragonslayer: false,
+	saygesFortune: SaygesFortune.SaygesUnknown, // or omit
 	slipkiksSavvy: false,
-	songflowerSerenade: true,
+	songflowerSerenade: false,
 	spiritOfZandalar: false,
 	warchiefsBlessing: false,
 });
 
 export const DefaultDebuffs = Debuffs.create({
-	curseOfRecklessness: true,
+	curseOfRecklessness: false,
 	exposeArmor: TristateEffect.TristateEffectImproved,
 	faerieFire: true,
-	huntersMark: TristateEffect.TristateEffectImproved,
-	improvedScorch: true,
+	huntersMark: TristateEffect.TristateEffectRegular,
 	judgementOfWisdom: true,
-	stormstrike: false,
 	sunderArmor: true,
+	giftOfArthas: true,
 });
 
 export const OtherDefaults = {
-	distanceFromTarget: 12,
+	distanceFromTarget: 5,
 	profession1: Profession.Enchanting,
 	profession2: Profession.Engineering,
-	race: Race.RaceTroll,
+	race: Race.RaceOrc,
 };
