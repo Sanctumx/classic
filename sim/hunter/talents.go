@@ -8,6 +8,10 @@ import (
 )
 
 func (hunter *Hunter) ApplyTalents() {
+	if hunter.talentsApplied {
+		return
+	}
+	hunter.talentsApplied = true
 	if hunter.pet != nil {
 		hunter.applyFrenzy()
 		hunter.registerBestialWrathCD()

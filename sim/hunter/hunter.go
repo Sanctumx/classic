@@ -112,6 +112,7 @@ type Hunter struct {
 	QuickShotsAura      *core.Aura
 	rapidRecupAura      *core.Aura
 	ExposePreyAura      *core.Aura
+	talentsApplied      bool
 }
 
 func (hunter *Hunter) GetCharacter() *core.Character {
