@@ -64,7 +64,7 @@ export const SurvDw = PresetUtils.makePresetTalents(
 );
 export const MmWeave = PresetUtils.makePresetTalents(
 	'MM Weave',
-	SavedTalents.create({ talentsString: '5-005005201-500230230050222151' }),
+	SavedTalents.create({ talentsString: '5-00504520115-5002302300502001' }),
 );
 export const TalentPresets = {
 	[Phase.Phase1]: [SurvDwHawk, SurvDw, MmWeave],

@@ -1,7 +1,6 @@
 package hunter
 
 import (
-	"fmt"
 	"github.com/wowsims/classic/sim/common/guardians"
 	"github.com/wowsims/classic/sim/core"
 	"github.com/wowsims/classic/sim/core/proto"
@@ -169,11 +168,10 @@ func (hunter *Hunter) Initialize() {
 	hunter.registerImmolationTrapSpell(traps)
 	hunter.registerFreezingTrapSpell(traps)
 	hunter.registerRapidFire()
-	fmt.Printf("hunter spells shot=%d sting=%v sniper=%v multi=%v\n",
-		len(hunter.Shots),
-		hunter.SerpentSting != nil,
-		hunter.SniperShot != nil,
-		hunter.MultiShot != nil)
+	hunter.registerRaptorStrikeSpell()
+	hunter.makeQueueSpellsAndAura()
+	hunter.applyMeleeResetsRangedAuto()
+
 }
 
 func (hunter *Hunter) Reset(sim *core.Simulation) {

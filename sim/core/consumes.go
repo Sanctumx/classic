@@ -920,7 +920,7 @@ func registerPotionCD(agent Agent, consumes *proto.Consumes) {
 	}
 }
 func makeMajorFrenzyPotionMCD(_ int32, character *Character, cdTimer *Timer) MajorCooldown {
-	actionID := ActionID{ItemID: 13442}
+	actionID := ActionID{ItemID: 250943}
 	aura := character.NewTemporaryStatsAura(
 		"Major Frenzy Potion",
 		actionID,
@@ -930,12 +930,8 @@ func makeMajorFrenzyPotionMCD(_ int32, character *Character, cdTimer *Timer) Maj
 		},
 		time.Second*30,
 	)
-
 	return MajorCooldown{
 		Type: CooldownTypeDPS,
-		ShouldActivate: func(sim *Simulation, character *Character) bool {
-			return !character.IsShapeshifted()
-		},
 		Spell: character.GetOrRegisterSpell(SpellConfig{
 			ActionID: actionID,
 			Flags:    SpellFlagNoOnCastComplete,
@@ -943,9 +939,6 @@ func makeMajorFrenzyPotionMCD(_ int32, character *Character, cdTimer *Timer) Maj
 				CD: Cooldown{
 					Timer:    cdTimer,
 					Duration: time.Minute * 2,
-				},
-				ModifyCast: func(sim *Simulation, _ *Spell, _ *Cast) {
-					character.CancelShapeshift(sim)
 				},
 			},
 			ApplyEffects: func(sim *Simulation, _ *Unit, _ *Spell) {
@@ -1223,8 +1216,7 @@ func makePotionActivationInternal(potionType proto.Potions, character *Character
 	case proto.Potions_MajorManaPotion:
 		return makeManaConsumableMCD(13444, character, potionCD)
 	case proto.Potions_MajorFrenzyPotion:
-		return makeMajorFrenzyPotionMCD(13442, character, potionCD)
-
+		return makeMajorFrenzyPotionMCD(250943, character, potionCD)
 	case proto.Potions_RagePotion:
 		return makeRageConsumableMCD(5631, character, potionCD)
 	case proto.Potions_GreatRagePotion:

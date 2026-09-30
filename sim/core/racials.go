@@ -94,11 +94,9 @@ func applyRaceEffects(agent Agent) {
 
 		spell := character.RegisterSpell(SpellConfig{
 			ActionID: actionID,
-			Flags:    SpellFlagNoOnCastComplete,
+			Flags:    SpellFlagNoOnCastComplete | SpellFlagAPL,
 			Cast: CastConfig{
-				DefaultCast: Cast{
-					GCD: GCDDefault,
-				},
+				DefaultCast: Cast{GCD: 0},
 				CD: Cooldown{
 					Timer:    character.NewTimer(),
 					Duration: time.Minute * 2,

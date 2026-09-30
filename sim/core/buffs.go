@@ -1499,6 +1499,20 @@ func BattleSquawkAura(character *Unit, stackcount int32) *Aura {
 func CreateExtraAttackAuraCommon(character *Character, buffActionID ActionID, auraLabel string, rank int32, getBonusAP func(aura *Aura, rank int32) float64) *Aura {
 	var bonusAP float64
 
+	wfHit := character.GetOrRegisterSpell(SpellConfig{
+		ActionID:         buffActionID.WithTag(1),
+		SpellSchool:      SpellSchoolPhysical,
+		DefenseType:      DefenseTypeMelee,
+		ProcMask:         ProcMaskMeleeMHSpecial,
+		Flags:            SpellFlagMeleeMetrics | SpellFlagNoOnCastComplete | SpellFlagPassiveSpell,
+		DamageMultiplier: 1,
+		ThreatMultiplier: 1,
+		BonusCoefficient: 1,
+		ApplyEffects: func(sim *Simulation, target *Unit, spell *Spell) {
+			base := spell.Unit.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
+			spell.CalcAndDealDamage(sim, target, base, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+		},
+	})
 	apBuffAura := character.GetOrRegisterAura(Aura{
 		Label:     auraLabel + " Buff",
 		ActionID:  buffActionID,
@@ -1513,48 +1527,35 @@ func CreateExtraAttackAuraCommon(character *Character, buffActionID ActionID, au
 		},
 	})
 
-	MakePermanent(character.GetOrRegisterAura(Aura{
-		Label:     "Extra Attacks  (Main Hand)", // Tracks Stored Extra Attacks from all sources
-		ActionID:  ActionID{SpellID: 21919},     // Thrash ID
-		Duration:  NeverExpires,
-		MaxStacks: 4, // Max is 4 extra attacks stored - more can proc after
-		OnInit: func(aura *Aura, sim *Simulation) {
-			aura.Unit.AutoAttacks.mh.extraAttacksAura = aura
-		},
-	}))
-
 	icd := Cooldown{
 		Timer:    character.NewTimer(),
 		Duration: time.Millisecond * 1500,
 	}
-
 	apBuffAura.Icd = &icd
 
 	MakePermanent(character.GetOrRegisterAura(Aura{
 		Label: auraLabel,
 		OnSpellHitDealt: func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
-			// charges are removed by every auto or next melee, whether it lands or not
-			//  this directly contradicts https://github.com/magey/classic-warrior/wiki/Windfury-Totem#triggered-by-melee-spell-while-an-on-next-swing-attack-is-queued
-			//  but can be seen in both "vanilla" and "sod" era logs
+			if spell == wfHit {
+				return
+			}
 			if apBuffAura.IsActive() && spell.ProcMask.Matches(ProcMaskMeleeWhiteHit) {
 				apBuffAura.RemoveStack(sim)
 			}
-
-			if !result.Landed() || !spell.ProcMask.Matches(ProcMaskMeleeMH) || spell.Flags.Matches(SpellFlagSuppressEquipProcs) {
+			if !result.Landed() ||
+				!spell.ProcMask.Matches(ProcMaskMeleeMHAuto|ProcMaskMeleeMHSpecial) ||
+				spell.Flags.Matches(SpellFlagSuppressEquipProcs) {
 				return
 			}
-
 			if icd.IsReady(sim) && sim.RandomFloat(auraLabel) < 0.2 {
 				icd.Use(sim)
 				apBuffAura.Activate(sim)
-				// aura is up _before_ the triggering swing lands, so if triggered by an auto attack, the aura fades right after the extra attack lands.
 				if spell.ProcMask == ProcMaskMeleeMHAuto {
 					apBuffAura.SetStacks(sim, 1)
 				} else {
 					apBuffAura.SetStacks(sim, 2)
 				}
-
-				aura.Unit.AutoAttacks.ExtraMHAttackProc(sim, 1, buffActionID, spell)
+				wfHit.Cast(sim, result.Target)
 			}
 		},
 	}))

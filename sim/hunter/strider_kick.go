@@ -15,8 +15,8 @@ func (hunter *Hunter) registerStriderKickSpell() {
 		ActionID:    core.ActionID{SpellID: 1317257}, // Classic icon; change when you have the Forever ID
 		SpellSchool: core.SpellSchoolPhysical,
 		DefenseType: core.DefenseTypeMelee,
-		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagAPL | core.SpellFlagMeleeMetrics | SpellFlagStrike,
+		ProcMask:    core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeMHAuto,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL | SpellFlagStrike,
 
 		RageCost: core.RageCostOptions{}, // ignore if hunter uses mana
 		ManaCost: core.ManaCostOptions{

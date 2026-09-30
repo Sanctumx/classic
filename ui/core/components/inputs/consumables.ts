@@ -668,10 +668,6 @@ export const MajorManaPotion: ConsumableInputConfig<Potions> = {
 	actionId: () => ActionId.fromItemId(13444),
 	value: Potions.MajorManaPotion,
 };
-export const MajorFrenzyPotion: ConsumableInputConfig<Potions> = {
-	actionId: () => ActionId.fromItemId(13442),
-	value: Potions.MajorFrenzyPotion,
-};
 export const MightRagePotion: ConsumableInputConfig<Potions> = {
 	actionId: () => ActionId.fromItemId(13442),
 	value: Potions.MightyRagePotion,
@@ -726,7 +722,10 @@ export const LesserStoneshieldPotion: ConsumableInputConfig<Potions> = {
 	actionId: () => ActionId.fromItemId(4623),
 	value: Potions.LesserStoneshieldPotion,
 };
-
+export const MajorFrenzyPotion: ConsumableInputConfig<Potions> = {
+	actionId: () => ActionId.fromItemId(250943),
+	value: Potions.MajorFrenzyPotion,
+};
 export const POTIONS_CONFIG: ConsumableStatOption<Potions>[] = [
 	{ config: MajorHealingPotion, stats: [Stat.StatArmor] },
 	{ config: SuperiorHealingPotion, stats: [Stat.StatArmor] },
@@ -740,7 +739,7 @@ export const POTIONS_CONFIG: ConsumableStatOption<Potions>[] = [
 	{ config: MightRagePotion, stats: [] },
 	{ config: GreatRagePotion, stats: [] },
 	{ config: RagePotion, stats: [] },
-	{ config: MajorFrenzyPotion, stats: [] },
+	{ config: MajorFrenzyPotion, stats: [Stat.StatAttackPower] },
 
 	// { config: MagicResistancePotion, stats: [] },
 	{ config: GreaterStoneshieldPotion, stats: [Stat.StatArmor] },

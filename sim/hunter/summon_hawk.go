@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/wowsims/classic/sim/core"
-	"github.com/wowsims/classic/sim/core/stats"
 )
 
 func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
@@ -47,17 +46,11 @@ func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			ap := hunter.GetStat(stats.AttackPower)
-			if rap := hunter.GetStat(stats.RangedAttackPower); rap > ap {
-				ap = rap
-			}
-			tick := ap * 0.05
+			tick := 108 + spell.RangedAttackPower(target, false)*0.05
 
 			spell.CalcAndDealDamage(sim, target, tick, spell.OutcomeRangedHitAndCrit)
 
 			dot := spell.Dot(target)
-			dot.SnapshotBaseDamage = tick
-			dot.SnapshotAttackerMultiplier = 1
 			if dot.IsActive() {
 				if dot.GetStacks() < 2 {
 					dot.AddStack(sim)
@@ -67,6 +60,8 @@ func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
 				dot.Apply(sim)
 				dot.SetStacks(sim, 1)
 			}
+			dot.SnapshotBaseDamage = tick * float64(dot.GetStacks())
+			dot.SnapshotAttackerMultiplier = spell.AttackerDamageMultiplier(spell.Unit.AttackTables[target.UnitIndex][spell.CastType], true)
 		},
 	})
 }

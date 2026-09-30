@@ -243,20 +243,23 @@ export class Database {
 	private static async getWowheadSpellTooltipData(id: number): Promise<IconData> {
 		return Database.getWowheadTooltipData(id, 'spell');
 	}
-	private static async getWowheadTooltipData(id: number, tooltipPostfix: string): Promise<IconData> {
+		private static async getWowheadTooltipData(id: number, tooltipPostfix: string): Promise<IconData> {
 		if (id === 0) return IconData.create();
 
-		const useForever = tooltipPostfix === 'spell' && id >= 400000;
-			const url = useForever
-				? `https://nether.wowhead.com/forever/tooltip/spell/${id}`
-				: `https://nether.wowhead.com/classic/tooltip/${tooltipPostfix}/${id}?lvl=${MAX_CHARACTER_LEVEL}`;
+		const useForever =
+			tooltipPostfix === 'spell' ||
+			(tooltipPostfix === 'item' && id >= 250000);
+
+		const url = useForever
+			? `https://nether.wowhead.com/forever/tooltip/${tooltipPostfix}/${id}`
+			: `https://nether.wowhead.com/classic/tooltip/${tooltipPostfix}/${id}?lvl=${MAX_CHARACTER_LEVEL}`;
 
 		try {
 			const response = await fetch(url);
 			const json = await response.json();
 			let rank = 0;
 			const tip = json && json['tooltip'];
-						if (tooltipPostfix === 'spell' && typeof tip === 'string') {
+			if (tooltipPostfix === 'spell' && typeof tip === 'string') {
 				const rankMatches = [...tip.matchAll(RANK_REGEX)];
 				if (rankMatches.length) {
 					rank = parseInt(rankMatches[0][1]);
@@ -266,7 +269,7 @@ export class Database {
 				id: id,
 				name: json['name'] || '',
 				icon: json['icon'] || '',
-				hasBuff: !!(json['buff']),
+				hasBuff: !!json['buff'],
 				rank: rank,
 			});
 		} catch (e) {
