@@ -893,6 +893,15 @@ func (aa *AutoAttacks) DelayRangedUntil(sim *Simulation, readyAt time.Duration) 
 	aa.ranged.swingAt = readyAt
 	sim.rescheduleWeaponAttack(aa.ranged.swingAt)
 }
+func (aa *AutoAttacks) RestartRangedSwing(sim *Simulation) {
+	if !aa.AutoSwingRanged || aa.ranged.spell == nil {
+		return
+	}
+	aa.ranged.updateSwingDuration(aa.ranged.unit.RangedSwingSpeed())
+	aa.ranged.swingAt = sim.CurrentTime + aa.ranged.curSwingDuration
+	aa.ranged.lastSwingAt = sim.CurrentTime
+	sim.rescheduleWeaponAttack(aa.ranged.swingAt)
+}
 
 // Returns the time at which the next melee attack will occur.
 func (aa *AutoAttacks) NextAttackAt() time.Duration {

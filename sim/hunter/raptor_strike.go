@@ -14,7 +14,6 @@ var RaptorStrikeBaseDamage = [RaptorStrikeRanks + 1]float64{0, 5, 11, 21, 34, 50
 var RaptorStrikeManaCost = [RaptorStrikeRanks + 1]float64{0, 15, 25, 35, 45, 55, 70, 80, 100}
 var RaptorStrikeLevel = [RaptorStrikeRanks + 1]int{0, 1, 8, 16, 24, 32, 40, 48, 56}
 
-// Returns true if the regular melee swing should be used, false otherwise.
 func (hunter *Hunter) TryRaptorStrike(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
 	if hunter.curQueuedAutoSpell != nil && hunter.curQueuedAutoSpell.CanCast(sim, hunter.CurrentTarget) {
 		return hunter.curQueuedAutoSpell
@@ -29,7 +28,7 @@ func (hunter *Hunter) getRaptorStrikeConfig(rank int) core.SpellConfig {
 
 	hunter.RaptorStrikeHit = hunter.newRaptorStrikeHitSpell(rank)
 
-	spellConfig := core.SpellConfig{
+	return core.SpellConfig{
 		SpellCode:     SpellCode_HunterRaptorStrike,
 		ActionID:      core.ActionID{SpellID: spellID},
 		SpellSchool:   core.SpellSchoolPhysical,
@@ -61,8 +60,6 @@ func (hunter *Hunter) getRaptorStrikeConfig(rank int) core.SpellConfig {
 			}
 		},
 	}
-
-	return spellConfig
 }
 
 func (hunter *Hunter) newRaptorStrikeHitSpell(rank int) *core.Spell {
@@ -83,7 +80,10 @@ func (hunter *Hunter) newRaptorStrikeHitSpell(rank int) *core.Spell {
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			damage := baseDamage + hunter.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
-			spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+			result := spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+			if result.Landed() {
+				hunter.AutoAttacks.RestartRangedSwing(sim)
+			}
 		},
 	})
 }

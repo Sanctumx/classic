@@ -286,6 +286,42 @@ func NewHunter(character *core.Character, options *proto.Player) *Hunter {
 func (hunter *Hunter) OnGCDReady(_ *core.Simulation) {
 }
 
+func (hunter *Hunter) applyMeleeResetsRangedAuto() {
+	hunter.RegisterAura(core.Aura{
+		Label:    "Melee Resets Ranged Auto",
+		Duration: core.NeverExpires,
+		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		},
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if !result.Landed() {
+				return
+			}
+
+			id := spell.ActionID.SpellID
+			if id == 1317257 || id == 1495 || id == 14269 || id == 14270 || id == 14271 {
+				return
+			}
+			if spell.SpellCode == SpellCode_HunterMongooseBite {
+				return
+			}
+
+			isWhite := spell.ProcMask.Matches(core.ProcMaskMeleeMHAuto)
+			isRaptor := spell.ProcMask.Matches(core.ProcMaskMeleeMHSpecial) &&
+				(spell.SpellCode == SpellCode_HunterRaptorStrike ||
+					spell.SpellCode == SpellCode_HunterRaptorStrikeHit ||
+					id == 2973 || id == 14260 || id == 14261 || id == 14262 ||
+					id == 14263 || id == 14264 || id == 14265 || id == 14266)
+
+			if !isWhite && !isRaptor {
+				return
+			}
+
+			hunter.AutoAttacks.RestartRangedSwing(sim)
+		},
+	})
+}
+
 type HunterAgent interface {
 	GetHunter() *Hunter
 }
