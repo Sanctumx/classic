@@ -220,9 +220,6 @@ func (warrior *Warrior) applyDualWieldSpecialization() {
 		}
 	})
 
-	// Forever: +20% OH rage per point.
-	warrior.Unit.AddOffHandDealtRageMultiplier(1 + 0.20*points)
-
 	// Forever: +2% OH hit per point
 	ohHit := 2 * points * core.MeleeHitRatingPerHitChance
 	warrior.OnSpellRegistered(func(spell *core.Spell) {

@@ -15,15 +15,16 @@ var RaptorStrikeManaCost = [RaptorStrikeRanks + 1]float64{0, 15, 25, 35, 45, 55,
 var RaptorStrikeLevel = [RaptorStrikeRanks + 1]int{0, 1, 8, 16, 24, 32, 40, 48, 56}
 
 func (hunter *Hunter) TryRaptorStrike(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
-	if hunter.curQueuedAutoSpell != nil && hunter.curQueuedAutoSpell.CanCast(sim, hunter.CurrentTarget) {
-		return hunter.curQueuedAutoSpell
+	if hunter.curQueueAura != nil &&
+		hunter.RaptorStrikeHit != nil &&
+		hunter.RaptorStrikeHit.CanCast(sim, hunter.CurrentTarget) {
+		return hunter.RaptorStrikeHit
 	}
 	return mhSwingSpell
 }
 
 func (hunter *Hunter) getRaptorStrikeConfig(rank int) core.SpellConfig {
 	spellID := RaptorStrikeSpellId[rank]
-	manaCost := RaptorStrikeManaCost[rank]
 	level := RaptorStrikeLevel[rank]
 
 	hunter.RaptorStrikeHit = hunter.newRaptorStrikeHitSpell(rank)
@@ -33,30 +34,25 @@ func (hunter *Hunter) getRaptorStrikeConfig(rank int) core.SpellConfig {
 		ActionID:      core.ActionID{SpellID: spellID},
 		SpellSchool:   core.SpellSchoolPhysical,
 		DefenseType:   core.DefenseTypeMelee,
-		ProcMask:      core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeMHAuto,
-		Flags:         core.SpellFlagMeleeMetrics | SpellFlagStrike,
+		ProcMask:      core.ProcMaskEmpty,
+		Flags:         core.SpellFlagAPL | SpellFlagStrike,
 		Rank:          rank,
 		RequiredLevel: level,
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: manaCost,
-		},
-
 		Cast: core.CastConfig{
-			CD: core.Cooldown{
-				Timer:    hunter.NewTimer(),
-				Duration: time.Second * 6,
+			DefaultCast: core.Cast{
+				GCD: core.GCDDefault,
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return hunter.DistanceFromTarget <= core.MaxMeleeAttackDistance
+			return hunter.curQueueAura == nil &&
+				hunter.DistanceFromTarget <= core.MaxMeleeAttackDistance &&
+				hunter.RaptorStrikeHit.IsReady(sim)
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			hunter.RaptorStrikeHit.Cast(sim, target)
-
-			if hunter.curQueueAura != nil {
-				hunter.curQueueAura.Deactivate(sim)
+			if hunter.raptorQueueAura != nil {
+				hunter.raptorQueueAura.Activate(sim)
 			}
 		},
 	}
@@ -65,22 +61,33 @@ func (hunter *Hunter) getRaptorStrikeConfig(rank int) core.SpellConfig {
 func (hunter *Hunter) newRaptorStrikeHitSpell(rank int) *core.Spell {
 	spellID := RaptorStrikeSpellId[rank]
 	baseDamage := RaptorStrikeBaseDamage[rank]
+	manaCost := RaptorStrikeManaCost[rank]
 
 	return hunter.RegisterSpell(core.SpellConfig{
-		SpellCode:   SpellCode_HunterRaptorStrikeHit,
-		ActionID:    core.ActionID{SpellID: spellID}.WithTag(1),
-		SpellSchool: core.SpellSchoolPhysical,
-		DefenseType: core.DefenseTypeMelee,
-		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
-
+		SpellCode:        SpellCode_HunterRaptorStrikeHit,
+		ActionID:         core.ActionID{SpellID: spellID}.WithTag(1),
+		SpellSchool:      core.SpellSchoolPhysical,
+		DefenseType:      core.DefenseTypeMelee,
+		ProcMask:         core.ProcMaskMeleeMHSpecial,
+		Flags:            core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
 		CritDamageBonus:  hunter.mortalShots(),
 		DamageMultiplier: 1,
 		BonusCoefficient: 1,
 
+		ManaCost: core.ManaCostOptions{FlatCost: manaCost},
+		Cast: core.CastConfig{
+			CD: core.Cooldown{
+				Timer:    hunter.NewTimer(),
+				Duration: time.Second * 6,
+			},
+		},
+
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			damage := baseDamage + hunter.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
 			result := spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+			if hunter.curQueueAura != nil {
+				hunter.curQueueAura.Deactivate(sim)
+			}
 			if result.Landed() {
 				hunter.AutoAttacks.RestartRangedSwing(sim)
 			}
@@ -89,57 +96,40 @@ func (hunter *Hunter) newRaptorStrikeHitSpell(rank int) *core.Spell {
 }
 
 func (hunter *Hunter) makeQueueSpellsAndAura() *core.Spell {
+	if hunter.raptorQueueAura != nil {
+		return nil
+	}
+
 	queueAura := hunter.RegisterAura(core.Aura{
 		Label:    "Raptor Strike Queued",
-		ActionID: hunter.RaptorStrike.ActionID,
+		ActionID: core.ActionID{SpellID: 14266},
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			if hunter.curQueueAura != nil {
-				hunter.curQueueAura.Deactivate(sim)
-			}
-			hunter.PseudoStats.DisableDWMissPenalty = true
 			hunter.curQueueAura = aura
 			hunter.curQueuedAutoSpell = hunter.RaptorStrike
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			hunter.PseudoStats.DisableDWMissPenalty = false
-			hunter.curQueueAura = nil
-			hunter.curQueuedAutoSpell = nil
+			if hunter.curQueueAura == aura {
+				hunter.curQueueAura = nil
+				hunter.curQueuedAutoSpell = nil
+			}
 		},
 	})
-
-	queueSpell := hunter.RegisterSpell(core.SpellConfig{
-		SpellCode: SpellCode_HunterRaptorStrike,
-		ActionID:  hunter.RaptorStrike.WithTag(3),
-		Flags:     core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return hunter.curQueueAura != queueAura &&
-				hunter.CurrentMana() >= hunter.RaptorStrike.Cost.GetCurrentCost() &&
-				!hunter.IsCasting(sim) &&
-				hunter.DistanceFromTarget <= core.MaxMeleeAttackDistance &&
-				hunter.RaptorStrike.IsReady(sim)
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			queueAura.Activate(sim)
-		},
-	})
-	queueSpell.CdSpell = hunter.RaptorStrike
-
-	return queueSpell
+	hunter.raptorQueueAura = queueAura
+	return nil
 }
 
 func (hunter *Hunter) registerRaptorStrikeSpell() {
-	maxRank := 8
-	best := 0
-	for r := 1; r <= maxRank; r++ {
-		if hunter.getRaptorStrikeConfig(r).RequiredLevel <= int(hunter.Level) {
-			best = r
-		}
+	rank := map[int32]int{
+		25: 4,
+		40: 6,
+		50: 7,
+		60: 8,
+	}[hunter.Level]
+	if rank == 0 {
+		rank = 8
 	}
-	if best == 0 {
-		return
-	}
-	hunter.RaptorStrike = hunter.GetOrRegisterSpell(hunter.getRaptorStrikeConfig(best))
+
+	hunter.RaptorStrike = hunter.GetOrRegisterSpell(hunter.getRaptorStrikeConfig(rank))
+	hunter.makeQueueSpellsAndAura()
 }

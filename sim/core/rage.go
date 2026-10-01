@@ -104,6 +104,7 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 			if result.Outcome.Matches(OutcomeDodge | OutcomeParry) {
 				return
 			}
+
 			var generatedRage float64
 			if spell.ProcMask == ProcMaskMeleeOHAuto {
 				generatedRage = foreverWhiteHitRage(unit.AutoAttacks.OH()) * ForeverOffHandRageFactor
@@ -116,6 +117,9 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 				generatedRage *= unit.rageBar.offHandDealtMultiplier
 			}
 			generatedRage += unit.rageBar.flatDamageDealtBonusRage
+			if result.DidCrit() {
+				generatedRage *= 1.75
+			}
 
 			var metrics *ResourceMetrics
 			if spell.Cost != nil {

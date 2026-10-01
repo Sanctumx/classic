@@ -77,6 +77,8 @@ type Hunter struct {
 
 	curQueueAura       *core.Aura
 	curQueuedAutoSpell *core.Spell
+	raptorFromSwing    bool
+	raptorQueueAura    *core.Aura
 
 	AimedShot       *core.Spell
 	ArcaneShot      *core.Spell
@@ -158,7 +160,6 @@ func (hunter *Hunter) Initialize() {
 	hunter.registerSniperShotSpell()
 	hunter.registerSummonHawkSpell(arcaneShotTimer)
 	hunter.registerStriderKickSpell()
-	hunter.registerRaptorStrikeSpell()
 	hunter.registerMongooseBiteSpell()
 	hunter.registerWingClipSpell()
 	hunter.registerVolleySpell()
@@ -169,13 +170,12 @@ func (hunter *Hunter) Initialize() {
 	hunter.registerFreezingTrapSpell(traps)
 	hunter.registerRapidFire()
 	hunter.registerRaptorStrikeSpell()
-	hunter.makeQueueSpellsAndAura()
 	hunter.applyMeleeResetsRangedAuto()
-
 }
 
 func (hunter *Hunter) Reset(sim *core.Simulation) {
 	hunter.activeHawks = 0
+	hunter.raptorFromSwing = false
 }
 
 func NewHunter(character *core.Character, options *proto.Player) *Hunter {
@@ -305,11 +305,7 @@ func (hunter *Hunter) applyMeleeResetsRangedAuto() {
 			}
 
 			isWhite := spell.ProcMask.Matches(core.ProcMaskMeleeMHAuto)
-			isRaptor := spell.ProcMask.Matches(core.ProcMaskMeleeMHSpecial) &&
-				(spell.SpellCode == SpellCode_HunterRaptorStrike ||
-					spell.SpellCode == SpellCode_HunterRaptorStrikeHit ||
-					id == 2973 || id == 14260 || id == 14261 || id == 14262 ||
-					id == 14263 || id == 14264 || id == 14265 || id == 14266)
+			isRaptor := spell.SpellCode == SpellCode_HunterRaptorStrikeHit
 
 			if !isWhite && !isRaptor {
 				return
