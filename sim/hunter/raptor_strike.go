@@ -35,18 +35,15 @@ func (hunter *Hunter) getRaptorStrikeConfig(rank int) core.SpellConfig {
 		SpellSchool:   core.SpellSchoolPhysical,
 		DefenseType:   core.DefenseTypeMelee,
 		ProcMask:      core.ProcMaskEmpty,
-		Flags:         core.SpellFlagAPL | SpellFlagStrike,
+		Flags:         core.SpellFlagAPL | core.SpellFlagNoOnCastComplete | SpellFlagStrike,
 		Rank:          rank,
 		RequiredLevel: level,
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: core.GCDDefault,
-			},
-		},
+		Cast: core.CastConfig{},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
 			return hunter.curQueueAura == nil &&
 				hunter.DistanceFromTarget <= core.MaxMeleeAttackDistance &&
+				hunter.RaptorStrikeHit != nil &&
 				hunter.RaptorStrikeHit.IsReady(sim)
 		},
 
@@ -102,7 +99,7 @@ func (hunter *Hunter) makeQueueSpellsAndAura() *core.Spell {
 
 	queueAura := hunter.RegisterAura(core.Aura{
 		Label:    "Raptor Strike Queued",
-		ActionID: core.ActionID{SpellID: 14266},
+		ActionID: core.ActionID{SpellID: 14266}.WithTag(2),
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			hunter.curQueueAura = aura
