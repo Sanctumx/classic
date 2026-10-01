@@ -32,12 +32,12 @@ import {
 import { SavedTalents } from '../core/proto/ui.js';
 import MMWeaveAPL from './apls/MMWeave.apl.json';
 import SurvDWAPL from './apls/SurvDW.apl.json';
+import MMHawkAPL from './apls/mmhawk.apl.json';
 import SurvDWGear from './gear_sets/surv_dw.gear.json';
 import MMWeaveGear from './gear_sets/mm_weave.gear.json';
 
 export const GearMMWeave = PresetUtils.makePresetGear('MM Weave', MMWeaveGear);
 export const GearSurvDW = PresetUtils.makePresetGear('Surv DW', SurvDWGear);
-
 
 export const GearPresets = {
 	[Phase.Phase1]: [GearSurvDW, GearMMWeave],
@@ -45,39 +45,65 @@ export const GearPresets = {
 
 export const APLSurvDW = PresetUtils.makePresetAPLRotation('Surv DW', SurvDWAPL);
 export const APLMMWeave = PresetUtils.makePresetAPLRotation('MM Weave', MMWeaveAPL);
+export const MMHawk = PresetUtils.makePresetAPLRotation('MM Hawk', MMHawkAPL);
 
 export const DefaultGear = GearSurvDW;
 
 export const APLPresets = {
-	[Phase.Phase1]: [APLMMWeave, APLSurvDW],
+	[Phase.Phase1]: [APLMMWeave, APLSurvDW, MMHawk],
 };
 
 export const DefaultAPL = APLSurvDW;
 
-export const SurvDwHawk = PresetUtils.makePresetTalents(
+export const SurvDWHawk = PresetUtils.makePresetTalents(
 	'Surv DW Hawk',
-	SavedTalents.create({ talentsString: '53200005021-005005-5002302300500201' }),
+	SavedTalents.create({ talentsString: '53200005001-0050052-5002302300500201' }),
 );
-export const SurvDw = PresetUtils.makePresetTalents(
-	'Surv DW',
+export const SurvDWLacerate = PresetUtils.makePresetTalents(
+	'Surv DW Lacerate',
 	SavedTalents.create({ talentsString: '5-005005201-500230230050222151' }),
 );
-export const MmWeave = PresetUtils.makePresetTalents(
+export const MMWeave = PresetUtils.makePresetTalents(
 	'MM Weave',
 	SavedTalents.create({ talentsString: '5-00504520115-5002302300502001' }),
 );
+export const TalentsMMHawk = PresetUtils.makePresetTalents(
+	'MM Hawk',
+	SavedTalents.create({ talentsString: '53200005001-005055200150205-5' }),
+);
 export const TalentPresets = {
-	[Phase.Phase1]: [SurvDwHawk, SurvDw, MmWeave],
+	[Phase.Phase1]: [SurvDWHawk, SurvDWLacerate, MMWeave, TalentsMMHawk],
 };
 
-export const DefaultTalents = SurvDwHawk;
+export const DefaultTalents = SurvDWHawk;
 
-export const DefaultOptions = HunterOptions.create({
-	ammo: Ammo.ThoriumHeadedArrow,
-	quiverBonus: Hunter_Options_QuiverBonus.Speed15,
-	petAttackSpeed: PetAttackSpeed.OneTwo,
-	petType: PetType.Cat,
-	petUptime: 1,
+export const DefaultRaidBuffs = RaidBuffs.create({
+	arcaneBrilliance: true,
+	battleShout: TristateEffect.TristateEffectRegular,
+	divineSpirit: true,
+	fireResistanceAura: true,
+	fireResistanceTotem: true,
+	giftOfTheWild: TristateEffect.TristateEffectRegular,
+	leaderOfThePack: true,
+	manaSpringTotem: TristateEffect.TristateEffectRegular,
+	strengthOfEarthTotem: TristateEffect.TristateEffectRegular,
+	trueshotAura: true,
+	windfuryTotem: true,
+});
+
+export const DefaultIndividualBuffs = IndividualBuffs.create({
+	blessingOfKings: true,
+	blessingOfMight: TristateEffect.TristateEffectRegular,
+	blessingOfWisdom: TristateEffect.TristateEffectRegular,
+});
+
+export const DefaultDebuffs = Debuffs.create({
+	curseOfElements: true,
+	faerieFire: true,
+	giftOfArthas: true,
+	huntersMark: TristateEffect.TristateEffectRegular,
+	judgementOfWisdom: true,
+	sunderArmor: true,
 });
 
 export const DefaultConsumes = Consumes.create({
@@ -85,58 +111,29 @@ export const DefaultConsumes = Consumes.create({
 	alcohol: Alcohol.AlcoholRumseyRumBlackLabel,
 	attackPowerBuff: AttackPowerBuff.WinterfallFirewater,
 	defaultConjured: Conjured.ConjuredDemonicRune,
-	defaultPotion: Potions.MajorFrenzyPotion,
+	defaultPotion: Potions.MajorManaPotion,
 	dragonBreathChili: true,
 	food: Food.FoodSmokedDesertDumpling,
 	healthElixir: HealthElixir.ElixirOfFortitude,
-	mainHandImbue: WeaponImbue.ElementalSharpeningStone,
-	offHandImbue: WeaponImbue.ElementalSharpeningStone,
+	mainHandImbue: WeaponImbue.DenseSharpeningStone,
 	manaRegenElixir: ManaRegenElixir.MagebloodPotion,
+	miscConsumes: { raptorPunch: true },
+	offHandImbue: WeaponImbue.DenseSharpeningStone,
 	spellPowerBuff: SpellPowerBuff.GreaterArcaneElixir,
 	strengthBuff: StrengthBuff.ElixirOfGiants,
 	zanzaBuff: ZanzaBuff.GroundScorpokAssay,
 });
 
-export const DefaultRaidBuffs = RaidBuffs.create({
-	arcaneBrilliance: true,
-	battleShout: TristateEffect.TristateEffectImproved,
-	divineSpirit: true,
-	fireResistanceAura: true,
-	fireResistanceTotem: true,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
-	leaderOfThePack: true,
-	manaSpringTotem: TristateEffect.TristateEffectRegular,
-	strengthOfEarthTotem: TristateEffect.TristateEffectImproved,
-	trueshotAura: true,
-	windfuryTotem: true,
-});
-
-export const DefaultIndividualBuffs = IndividualBuffs.create({
-	blessingOfKings: true,
-	blessingOfMight: TristateEffect.TristateEffectImproved,
-	blessingOfWisdom: TristateEffect.TristateEffectRegular,
-	fengusFerocity: false,
-	moldarsMoxie: false,
-	rallyingCryOfTheDragonslayer: false,
-	saygesFortune: SaygesFortune.SaygesUnknown, // or omit
-	slipkiksSavvy: false,
-	songflowerSerenade: false,
-	spiritOfZandalar: false,
-	warchiefsBlessing: false,
-});
-
-export const DefaultDebuffs = Debuffs.create({
-	curseOfRecklessness: false,
-	exposeArmor: TristateEffect.TristateEffectImproved,
-	faerieFire: true,
-	huntersMark: TristateEffect.TristateEffectRegular,
-	judgementOfWisdom: true,
-	sunderArmor: true,
-	giftOfArthas: true,
+export const DefaultOptions = HunterOptions.create({
+	ammo: Ammo.ThoriumHeadedArrow,
+	petAttackSpeed: PetAttackSpeed.OneTwo,
+	petType: PetType.Cat,
+	petUptime: 1,
+	quiverBonus: Hunter_Options_QuiverBonus.Speed15,
 });
 
 export const OtherDefaults = {
-	distanceFromTarget: 5,
+	distanceFromTarget: 3,
 	profession1: Profession.Enchanting,
 	profession2: Profession.Engineering,
 	race: Race.RaceOrc,
