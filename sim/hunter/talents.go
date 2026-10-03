@@ -85,7 +85,7 @@ func (hunter *Hunter) ApplyTalents() {
 	}
 
 	if hunter.Talents.LightningReflexes > 0 {
-		hunter.MultiplyStat(stats.Agility, 1.0+0.03*float64(hunter.Talents.LightningReflexes))
+		hunter.MultiplyStat(stats.Agility, 1.0+0.02*float64(hunter.Talents.LightningReflexes))
 	}
 
 	if hunter.Talents.PredatorsEdge > 0 {
@@ -115,27 +115,22 @@ func (hunter *Hunter) ApplyTalents() {
 }
 
 func (hunter *Hunter) applyExposePrey() {
-	if hunter.Talents.ExposePrey == 0 {
+	if hunter.Talents.ExposePrey == 0 || hunter.DefensiveState == nil {
 		return
 	}
-	hunter.RegisterAura(core.Aura{
-		Label:    "Expose Prey",
-		Duration: core.NeverExpires,
-		OnReset: func(aura *core.Aura, sim *core.Simulation) {
-			aura.Activate(sim)
-		},
+	procChance := 0.05 * float64(hunter.Talents.ExposePrey)
+
+	core.MakePermanent(hunter.RegisterAura(core.Aura{
+		Label: "Expose Prey",
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if !result.Landed() || hunter.DefensiveState == nil {
+			if !result.Landed() {
 				return
 			}
-			if spell == hunter.LaceratingBleed {
-				return
-			}
-			if sim.Proc(0.05*float64(hunter.Talents.ExposePrey), "Expose Prey") {
+			if sim.RandomFloat("Expose Prey") < procChance {
 				hunter.DefensiveState.Activate(sim)
 			}
 		},
-	})
+	}))
 }
 
 func (hunter *Hunter) applyLaceratingStrikes() {

@@ -649,7 +649,7 @@ func (spell *Spell) outcomeEnemyMeleeWhite(sim *Simulation, result *SpellResult,
 
 func (result *SpellResult) applyAttackTableMiss(spell *Spell, attackTable *AttackTable, roll float64, chance *float64, countHits bool) bool {
 	missChance := attackTable.BaseMissChance - spell.PhysicalHitChance(attackTable)
-	if spell.Unit.AutoAttacks.IsDualWielding && !spell.Unit.PseudoStats.DisableDWMissPenalty {
+	if spell.Unit.AutoAttacks.IsDualWielding {
 		missChance += 0.19
 	}
 	*chance = max(0, missChance)
@@ -820,7 +820,7 @@ func (result *SpellResult) applyAttackTableHit(spell *Spell, countHits bool) {
 func (result *SpellResult) applyEnemyAttackTableMiss(spell *Spell, attackTable *AttackTable, roll float64, chance *float64, countHits bool) bool {
 	missChance := attackTable.BaseMissChance + spell.Unit.PseudoStats.IncreasedMissChance +
 		result.Target.stats[stats.Defense]*DefenseRatingToChanceReduction
-	if spell.Unit.AutoAttacks.IsDualWielding && !spell.Unit.PseudoStats.DisableDWMissPenalty {
+	if spell.Unit.AutoAttacks.IsDualWielding {
 		missChance += 0.19
 	}
 	*chance = max(0, missChance)

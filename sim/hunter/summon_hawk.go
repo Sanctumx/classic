@@ -4,64 +4,108 @@ import (
 	"time"
 
 	"github.com/wowsims/classic/sim/core"
+	"github.com/wowsims/classic/sim/core/proto"
 )
 
-func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
+func (hunter *Hunter) registerSummonHawkSpell(sharedTimer *core.Timer) {
 	if !hunter.Talents.SummonHawk {
 		return
 	}
+	if sharedTimer == nil {
+		sharedTimer = hunter.NewTimer()
+	}
 
-	hunter.SummonHawk = hunter.GetOrRegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 1293241},
+	baseDamage := 32.0
+	if hunter.Level >= 60 {
+		baseDamage = 108
+	} else if hunter.Level >= 48 {
+		baseDamage = 80
+	} else if hunter.Level >= 36 {
+		baseDamage = 55
+	}
+
+	hawkMult := 1 + 0.03*float64(hunter.Talents.UnleashedFury)
+	hawkCrit := 2 * float64(hunter.Talents.Ferocity) * core.CritRatingPerCritChance
+
+	var swingBase float64
+	var swingTarget *core.Unit
+	expireAt := []time.Duration{0, 0}
+
+	hawkSwing := hunter.GetOrRegisterSpell(core.SpellConfig{
+		ActionID:    core.ActionID{SpellID: 1293241}.WithTag(1),
 		SpellSchool: core.SpellSchoolPhysical,
 		DefenseType: core.DefenseTypeRanged,
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       core.SpellFlagAPL | core.SpellFlagPureDot,
-		ManaCost: core.ManaCostOptions{
-			FlatCost: 190, // rank 4 @ 60; 80 / 105 / 135 / 190
-		},
-		DamageMultiplier: 1 + 0.03*float64(hunter.Talents.UnleashedFury),
-		BonusCritRating:  2 * float64(hunter.Talents.Ferocity) * core.CritRatingPerCritChance,
-		ThreatMultiplier: 1,
+		ProcMask:    core.ProcMaskRangedSpecial,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagPassiveSpell,
+		CastType:    proto.CastType_CastTypeRanged,
 
+		BonusCritRating:  hawkCrit,
+		DamageMultiplier: hawkMult,
+		ThreatMultiplier: 1,
+		BonusCoefficient: 1,
+
+		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+			if swingTarget == nil {
+				return
+			}
+			spell.CalcAndDealDamage(sim, swingTarget, swingBase, spell.OutcomeRangedHitAndCrit)
+		},
+	})
+
+	hunter.SummonHawk = hunter.GetOrRegisterSpell(core.SpellConfig{
+		ActionID:     core.ActionID{SpellID: 1293241},
+		SpellSchool:  core.SpellSchoolPhysical,
+		DefenseType:  core.DefenseTypeRanged,
+		ProcMask:     core.ProcMaskRangedSpecial,
+		Flags:        core.SpellFlagMeleeMetrics | core.SpellFlagAPL | SpellFlagShot,
+		CastType:     proto.CastType_CastTypeRanged,
+		MissileSpeed: 24,
+
+		ManaCost: core.ManaCostOptions{FlatCost: 80},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{GCD: core.GCDDefault},
+			IgnoreHaste: true,
 			CD: core.Cooldown{
-				Timer:    timer,
+				Timer:    sharedTimer,
 				Duration: time.Second * 6,
 			},
 		},
 
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label:     "Summon Hawk",
-				ActionID:  core.ActionID{SpellID: 1293241},
-				MaxStacks: 2,
-			},
-			NumberOfTicks: 6,
-			TickLength:    time.Second * 3,
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
-			},
-		},
+		DamageMultiplier: hawkMult,
+		ThreatMultiplier: 1,
+		BonusCoefficient: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			tick := 108 + spell.RangedAttackPower(target, false)*0.05
+			initial := baseDamage + 0.05*spell.RangedAttackPower(target, false)
+			spell.CalcAndDealDamage(sim, target, initial, spell.OutcomeRangedHitAndCrit)
 
-			spell.CalcAndDealDamage(sim, target, tick, spell.OutcomeRangedHitAndCrit)
+			swingBase = 20 + 0.01*spell.RangedAttackPower(target, false)
+			swingTarget = target
 
-			dot := spell.Dot(target)
-			if dot.IsActive() {
-				if dot.GetStacks() < 2 {
-					dot.AddStack(sim)
+			for i := 0; i < 2; i++ {
+				if expireAt[i] > sim.CurrentTime {
+					continue
 				}
-				dot.Refresh(sim)
-			} else {
-				dot.Apply(sim)
-				dot.SetStacks(sim, 1)
+				slot := i
+				expireAt[slot] = sim.CurrentTime + 18*time.Second
+
+				var pa *core.PendingAction
+				pa = &core.PendingAction{
+					NextActionAt: sim.CurrentTime + 2*time.Second,
+					Priority:     core.ActionPriorityDOT,
+					OnAction: func(sim *core.Simulation) {
+						if sim.CurrentTime > expireAt[slot] || swingTarget == nil {
+							expireAt[slot] = 0
+							return
+						}
+						hawkSwing.Cast(sim, swingTarget)
+						pa.NextActionAt = sim.CurrentTime + 2*time.Second
+						sim.AddPendingAction(pa)
+					},
+				}
+				sim.AddPendingAction(pa)
+				break
 			}
-			dot.SnapshotBaseDamage = tick * float64(dot.GetStacks())
-			dot.SnapshotAttackerMultiplier = spell.AttackerDamageMultiplier(spell.Unit.AttackTables[target.UnitIndex][spell.CastType], true)
 		},
 	})
 }

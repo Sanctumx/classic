@@ -33,8 +33,10 @@ import { SavedTalents } from '../core/proto/ui.js';
 import MMWeaveAPL from './apls/MMWeave.apl.json';
 import SurvDWAPL from './apls/SurvDW.apl.json';
 import MMHawkAPL from './apls/mmhawk.apl.json';
+import FullMeleeWeaveAPL from './apls/full_melee_weave.apl.json';
 import SurvDWGear from './gear_sets/surv_dw.gear.json';
 import MMWeaveGear from './gear_sets/mm_weave.gear.json';
+
 
 export const GearMMWeave = PresetUtils.makePresetGear('MM Weave', MMWeaveGear);
 export const GearSurvDW = PresetUtils.makePresetGear('Surv DW', SurvDWGear);
@@ -46,11 +48,12 @@ export const GearPresets = {
 export const APLSurvDW = PresetUtils.makePresetAPLRotation('Surv DW', SurvDWAPL);
 export const APLMMWeave = PresetUtils.makePresetAPLRotation('MM Weave', MMWeaveAPL);
 export const MMHawk = PresetUtils.makePresetAPLRotation('MM Hawk', MMHawkAPL);
+export const APLFullMeleeWeave = PresetUtils.makePresetAPLRotation('FullMeleeWeave', FullMeleeWeaveAPL);
 
 export const DefaultGear = GearSurvDW;
 
 export const APLPresets = {
-	[Phase.Phase1]: [APLMMWeave, APLSurvDW, MMHawk],
+	[Phase.Phase1]: [APLFullMeleeWeave, APLMMWeave, APLSurvDW, MMHawk],
 };
 
 export const DefaultAPL = APLSurvDW;

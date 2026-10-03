@@ -76,12 +76,10 @@ func (hunter *Hunter) registerRaptorStrikeSpell() {
 		ActionID: core.ActionID{SpellID: spellID}.WithTag(2),
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			hunter.PseudoStats.DisableDWMissPenalty = true
 			hunter.curQueueAura = aura
 			hunter.curQueuedAutoSpell = hunter.RaptorStrikeHit
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			hunter.PseudoStats.DisableDWMissPenalty = false
 			hunter.curQueueAura = nil
 			hunter.curQueuedAutoSpell = nil
 		},

@@ -33,10 +33,12 @@ func (hunter *Hunter) getMongooseBiteConfig(rank int) core.SpellConfig {
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return hunter.DefensiveState != nil && hunter.DefensiveState.IsActive()
+			return hunter.DistanceFromTarget <= 5 &&
+				hunter.DefensiveState != nil &&
+				hunter.DefensiveState.IsActive()
 		},
 
-		CritDamageBonus:  hunter.mortalShots(),
+		CritDamageBonus:  0.02 * float64(hunter.Talents.PredatorsEdge),
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
 		BonusCoefficient: 1,
@@ -57,6 +59,32 @@ func (hunter *Hunter) registerMongooseBiteSpell() {
 		ActionID: core.ActionID{SpellID: 5302},
 		Duration: time.Second * 5,
 	})
+
+	core.MakePermanent(hunter.RegisterAura(core.Aura{
+		Label: "Mongoose Bite Trigger",
+		OnSpellHitTaken: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if result.Outcome.Matches(core.OutcomeDodge | core.OutcomeParry) {
+				hunter.DefensiveState.Activate(sim)
+			}
+		},
+	}))
+
+	if hunter.Talents.ExposePrey > 0 {
+		procChance := 0.05 * float64(hunter.Talents.ExposePrey)
+		core.MakePermanent(hunter.RegisterAura(core.Aura{
+			Label: "Expose Prey",
+			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+				if !result.Landed() || sim.RandomFloat("Expose Prey") >= procChance {
+					return
+				}
+				if hunter.DefensiveState.IsActive() {
+					hunter.DefensiveState.Refresh(sim)
+				} else {
+					hunter.DefensiveState.Activate(sim)
+				}
+			},
+		}))
+	}
 
 	best := 0
 	for rank := 1; rank <= 4; rank++ {
