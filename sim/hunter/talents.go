@@ -91,14 +91,19 @@ func (hunter *Hunter) ApplyTalents() {
 	if hunter.Talents.PredatorsEdge > 0 {
 		critDmg := 0.06 * float64(hunter.Talents.PredatorsEdge)
 		ohMult := 1 + 0.10*float64(hunter.Talents.PredatorsEdge)
-		hunter.OnSpellRegistered(func(spell *core.Spell) {
-			if spell.ProcMask.Matches(core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskMeleeOHAuto) {
+		apply := func(spell *core.Spell) {
+			if spell == nil {
+				return
+			}
+			if spell.ProcMask.Matches(core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) {
 				spell.CritDamageBonus += critDmg
 			}
-			if spell.ProcMask.Matches(core.ProcMaskMeleeOH) {
+			if spell.ProcMask.Matches(core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeOHSpecial) {
 				spell.DamageMultiplier *= ohMult
 			}
-		})
+		}
+		hunter.OnSpellRegistered(apply)
+		apply(hunter.AutoAttacks.OHAuto())
 	}
 
 	if hunter.Talents.ImprovedTracking > 0 {

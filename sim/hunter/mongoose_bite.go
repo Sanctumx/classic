@@ -38,7 +38,6 @@ func (hunter *Hunter) getMongooseBiteConfig(rank int) core.SpellConfig {
 				hunter.DefensiveState.IsActive()
 		},
 
-		CritDamageBonus:  0.02 * float64(hunter.Talents.PredatorsEdge),
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
 		BonusCoefficient: 1,
