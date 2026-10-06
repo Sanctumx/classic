@@ -170,13 +170,7 @@ func (hunter *Hunter) applyLaceratingStrikes() {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if !result.Landed() || result.Damage <= 0 {
-				return
-			}
-			if spell == hunter.LaceratingBleed {
-				return
-			}
-			if !spell.ProcMask.Matches(core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) {
+			if spell != hunter.MongooseBite || !result.Landed() || result.Damage <= 0 {
 				return
 			}
 			dot := hunter.LaceratingBleed.Dot(result.Target)
@@ -295,14 +289,40 @@ func (hunter *Hunter) applyResourcefulness() {
 	if hunter.Talents.Resourcefulness == 0 {
 		return
 	}
+
 	hunter.OnSpellRegistered(func(spell *core.Spell) {
 		if spell.Cost == nil {
 			return
 		}
 		if spell.Flags.Matches(SpellFlagTrap | SpellFlagStrike) {
-			spell.Cost.Multiplier -= 15 * hunter.Talents.Resourcefulness
+			spell.Cost.Multiplier -= 30 * hunter.Talents.Resourcefulness
 		}
 	})
+
+	procChance := 0.30 * float64(hunter.Talents.Resourcefulness)
+	aura := hunter.RegisterAura(core.Aura{
+		Label:    "Resourcefulness",
+		ActionID: core.ActionID{SpellID: 1242688},
+		Duration: time.Second * 30,
+		OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			hunter.PseudoStats.SpiritRegenRateCasting += 0.5
+		},
+		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+			hunter.PseudoStats.SpiritRegenRateCasting -= 0.5
+		},
+	})
+
+	core.MakePermanent(hunter.RegisterAura(core.Aura{
+		Label: "Resourcefulness Proc",
+		OnSpellHitDealt: func(_ *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if !result.DidCrit() || spell.ProcMask.Matches(core.ProcMaskEmpty) {
+				return
+			}
+			if sim.RandomFloat("Resourcefulness") < procChance {
+				aura.Activate(sim)
+			}
+		},
+	}))
 }
 
 func (hunter *Hunter) applySurvivalistDiscipline() {
