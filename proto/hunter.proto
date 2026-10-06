@@ -139,6 +139,7 @@ message Hunter {
 		double pet_attack_speed_old = 5;
 		bool new_raptor_strike = 6;
 		PetAttackSpeed pet_attack_speed = 7;
+		bool lacerating_rollover = 8;
 	}
 
 	Options options = 2;

@@ -71,6 +71,10 @@ func (dot *Dot) NextTickAt() time.Duration {
 	return dot.lastTickTime + dot.tickPeriod
 }
 
+func (dot *Dot) TickAction() *PendingAction {
+	return dot.tickAction
+}
+
 func (dot *Dot) TimeUntilNextTick(sim *Simulation) time.Duration {
 	return dot.NextTickAt() - sim.CurrentTime
 }

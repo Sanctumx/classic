@@ -7,6 +7,10 @@ import (
 	"github.com/wowsims/classic/sim/core/stats"
 )
 
+// false = old behavior: keep the stronger bleed and restart the timer.
+// true = rollover: add unticked damage, keep the existing tick time.
+const laceratingRollover = true
+
 func (hunter *Hunter) ApplyTalents() {
 	if hunter.talentsApplied {
 		return
@@ -174,12 +178,23 @@ func (hunter *Hunter) applyLaceratingStrikes() {
 				return
 			}
 			dot := hunter.LaceratingBleed.Dot(result.Target)
-			tick := result.Damage * 0.40 / 7
-			if tick > dot.SnapshotBaseDamage {
-				dot.SnapshotBaseDamage = tick
+			newTick := result.Damage * 0.40 / 7
+
+			if !dot.IsActive() {
+				dot.SnapshotBaseDamage = newTick
 				dot.SnapshotAttackerMultiplier = 1
+				dot.Apply(sim)
+				return
 			}
+
+			nextTick := dot.NextTickAt()
+			remaining := dot.SnapshotBaseDamage * float64(dot.NumTicksRemaining(sim))
+			dot.SnapshotBaseDamage = newTick + remaining/7
+			dot.SnapshotAttackerMultiplier = 1
 			dot.ApplyOrRefresh(sim)
+			if pa := dot.TickAction(); pa != nil {
+				pa.NextActionAt = nextTick
+			}
 		},
 	})
 }

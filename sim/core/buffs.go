@@ -1409,7 +1409,7 @@ func TrueshotAura(unit *Unit) *Aura {
 	makeExclusiveBuff(aura, BuffConfig{
 		Category: "TrueshotAura",
 		Stats: []StatConfig{
-			{stats.RangedAttackPower, 50, false},
+			{stats.RangedAttackPower, 100, false},
 		},
 	})
 
