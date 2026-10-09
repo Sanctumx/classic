@@ -30,38 +30,43 @@ import {
 	Hunter_Options_QuiverBonus,
 } from '../core/proto/hunter.js';
 import { SavedTalents } from '../core/proto/ui.js';
-import SurvDWAPL from './apls/SurvDW.apl.json';
-import MMHawkAPL from './apls/mmhawk.apl.json';
-import TwoHWeaveAPL from './apls/2HWeave.apl.json';
+
 import SurvDWGear from './gear_sets/surv_dw.gear.json';
-import MMWeaveGear from './gear_sets/mm_weave.gear.json';
+import TwoHWeaveGear from './gear_sets/2h_weave.gear.json';
+import MMGear from './gear_sets/mm_weave.gear.json';
 
+import TwoHWeaveAPL from './apls/2h_weave.apl.json';
+import SurvDWAPL from './apls/SurvDW.apl.json';
+import MMSniperAPL from './apls/mm_sniper.apl.json';
 
-export const GearMMWeave = PresetUtils.makePresetGear('2H Weave', MMWeaveGear);
-export const GearSurvDW = PresetUtils.makePresetGear('Surv DW', SurvDWGear);
-
-export const GearPresets = {
-	[Phase.Phase1]: [GearSurvDW, GearMMWeave],
-};
-
-export const APLSurvDW = PresetUtils.makePresetAPLRotation('Surv DW', SurvDWAPL);
-export const MMHawk = PresetUtils.makePresetAPLRotation('MM Hawk', MMHawkAPL);
 export const APL2HWeave = PresetUtils.makePresetAPLRotation('2H Weave', TwoHWeaveAPL);
-
-export const DefaultGear = GearMMWeave;
+export const APLSurvDW = PresetUtils.makePresetAPLRotation('Surv DW', SurvDWAPL);
+export const APLMMSniper = PresetUtils.makePresetAPLRotation('MM Sniper', MMSniperAPL);
 
 export const APLPresets = {
-	[Phase.Phase1]: [APL2HWeave, APLSurvDW, MMHawk],
+	[Phase.Phase1]: [APL2HWeave, APLSurvDW, APLMMSniper],
 };
 
 export const DefaultAPL = APL2HWeave;
+
+export const Gear2HWeave = PresetUtils.makePresetGear('2H Weave', TwoHWeaveGear);
+export const GearSurvDW = PresetUtils.makePresetGear('Surv DW', SurvDWGear);
+export const GearMMTurret = PresetUtils.makePresetGear('MM Turret', MMGear);
+
+export const GearPresets = {
+	[Phase.Phase1]: [GearSurvDW, Gear2HWeave, GearMMTurret],
+};
+
+export const DefaultGear = Gear2HWeave;
+
+
 
 export const SurvDWHawk = PresetUtils.makePresetTalents(
 	'Surv DW Hawk',
 	SavedTalents.create({ talentsString: '53200005001-0050052-5002302300500201' }),
 );
 export const SurvDWLacerate = PresetUtils.makePresetTalents(
-	'Surv DW Lacerate',
+	'Surv DW LS',
 	SavedTalents.create({ talentsString: '5-005005201-500230230050222151' }),
 );
 export const TwoHWeave = PresetUtils.makePresetTalents(
@@ -72,8 +77,12 @@ export const TalentsMMHawk = PresetUtils.makePresetTalents(
 	'MM Hawk',
 	SavedTalents.create({ talentsString: '53200005001-005055200150205-5' }),
 );
+export const TalentsMMSniper = PresetUtils.makePresetTalents(
+	'MM Sniper',
+	SavedTalents.create({ talentsString: '5-0053552511503051-5' }),
+);
 export const TalentPresets = {
-	[Phase.Phase1]: [SurvDWHawk, SurvDWLacerate, TwoHWeave, TalentsMMHawk],
+	[Phase.Phase1]: [SurvDWHawk, SurvDWLacerate, TwoHWeave, TalentsMMHawk, TalentsMMSniper],
 };
 
 export const DefaultTalents = TwoHWeave;
