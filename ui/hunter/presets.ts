@@ -30,15 +30,14 @@ import {
 	Hunter_Options_QuiverBonus,
 } from '../core/proto/hunter.js';
 import { SavedTalents } from '../core/proto/ui.js';
-import MMWeaveAPL from './apls/MMWeave.apl.json';
 import SurvDWAPL from './apls/SurvDW.apl.json';
 import MMHawkAPL from './apls/mmhawk.apl.json';
-import FullMeleeWeaveAPL from './apls/full_melee_weave.apl.json';
+import TwoHWeaveAPL from './apls/2HWeave.apl.json';
 import SurvDWGear from './gear_sets/surv_dw.gear.json';
 import MMWeaveGear from './gear_sets/mm_weave.gear.json';
 
 
-export const GearMMWeave = PresetUtils.makePresetGear('MM Weave', MMWeaveGear);
+export const GearMMWeave = PresetUtils.makePresetGear('2H Weave', MMWeaveGear);
 export const GearSurvDW = PresetUtils.makePresetGear('Surv DW', SurvDWGear);
 
 export const GearPresets = {
@@ -46,17 +45,16 @@ export const GearPresets = {
 };
 
 export const APLSurvDW = PresetUtils.makePresetAPLRotation('Surv DW', SurvDWAPL);
-export const APLMMWeave = PresetUtils.makePresetAPLRotation('MM Weave', MMWeaveAPL);
 export const MMHawk = PresetUtils.makePresetAPLRotation('MM Hawk', MMHawkAPL);
-export const APLFullMeleeWeave = PresetUtils.makePresetAPLRotation('FullMeleeWeave', FullMeleeWeaveAPL);
+export const APL2HWeave = PresetUtils.makePresetAPLRotation('2H Weave', TwoHWeaveAPL);
 
-export const DefaultGear = GearSurvDW;
+export const DefaultGear = GearMMWeave;
 
 export const APLPresets = {
-	[Phase.Phase1]: [APLFullMeleeWeave, APLMMWeave, APLSurvDW, MMHawk],
+	[Phase.Phase1]: [APL2HWeave, APLSurvDW, MMHawk],
 };
 
-export const DefaultAPL = APLSurvDW;
+export const DefaultAPL = APL2HWeave;
 
 export const SurvDWHawk = PresetUtils.makePresetTalents(
 	'Surv DW Hawk',
@@ -66,19 +64,19 @@ export const SurvDWLacerate = PresetUtils.makePresetTalents(
 	'Surv DW Lacerate',
 	SavedTalents.create({ talentsString: '5-005005201-500230230050222151' }),
 );
-export const MMWeave = PresetUtils.makePresetTalents(
-	'MM Weave',
-	SavedTalents.create({ talentsString: '5-00504520115-5002302300502001' }),
+export const TwoHWeave = PresetUtils.makePresetTalents(
+	'2H Weave',
+	SavedTalents.create({ talentsString: '-00531500114-500230230050220151' }),
 );
 export const TalentsMMHawk = PresetUtils.makePresetTalents(
 	'MM Hawk',
 	SavedTalents.create({ talentsString: '53200005001-005055200150205-5' }),
 );
 export const TalentPresets = {
-	[Phase.Phase1]: [SurvDWHawk, SurvDWLacerate, MMWeave, TalentsMMHawk],
+	[Phase.Phase1]: [SurvDWHawk, SurvDWLacerate, TwoHWeave, TalentsMMHawk],
 };
 
-export const DefaultTalents = SurvDWHawk;
+export const DefaultTalents = TwoHWeave;
 
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,

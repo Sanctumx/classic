@@ -65,14 +65,10 @@ func applyRaceEffects(agent Agent) {
 		character.AddStat(stats.NatureResistance, 10)
 		character.AddStat(stats.Dodge, 1)
 	case proto.Race_RaceOrc:
-		character.AxeSpecializationAura()
-
-		if character.Class == proto.Class_ClassHunter || character.Class == proto.Class_ClassWarlock {
-			for _, pet := range character.Pets {
-				if !pet.IsGuardian() {
-					pet.PseudoStats.DamageDealtMultiplier *= 1.05
-				}
-			}
+		mhItem := character.Equipment.MainHand()
+		ohItem := character.Equipment.OffHand()
+		if mhItem.WeaponType == proto.WeaponType_WeaponTypeAxe || ohItem.WeaponType == proto.WeaponType_WeaponTypeAxe {
+			character.AddStat(stats.MeleeCrit, 1*CritRatingPerCritChance)
 		}
 
 		actionID := ActionID{SpellID: 20572}

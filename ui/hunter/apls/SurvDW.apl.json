@@ -1,7 +1,8 @@
 {
       "type": "TypeAPL",
       "prepullActions": [
-        {"action":{"castSpell":{"spellId":{"spellId":1299447}}},"doAtValue":{"const":{"val":"-10s"}}}
+        {"action":{"castSpell":{"spellId":{"spellId":1299447}}},"doAtValue":{"const":{"val":"-10s"}}},
+        {"action":{"move":{"rangeFromTarget":{"const":{"val":"3"}}}},"doAtValue":{"const":{"val":"-5s"}}}
       ],
       "priorityList": [
         {"action":{"condition":{"cmp":{"op":"OpGt","lhs":{"math":{"op":"OpSub","lhs":{"maxMana":{}},"rhs":{"currentMana":{}}}},"rhs":{"const":{"val":"1300"}}}},"castSpell":{"spellId":{"itemId":12662}}}},

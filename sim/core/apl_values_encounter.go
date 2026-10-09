@@ -122,3 +122,23 @@ func (value *APLValueIsExecutePhase) GetBool(sim *Simulation) bool {
 func (value *APLValueIsExecutePhase) String() string {
 	return "Is Execute Phase"
 }
+
+type APLValueDistanceToTarget struct {
+	DefaultAPLValueImpl
+	unit *Unit
+}
+
+func (rot *APLRotation) newValueDistanceToTarget(_ *proto.APLValueDistanceToTarget) APLValue {
+	return &APLValueDistanceToTarget{
+		unit: rot.unit,
+	}
+}
+func (value *APLValueDistanceToTarget) Type() proto.APLValueType {
+	return proto.APLValueType_ValueTypeFloat
+}
+func (value *APLValueDistanceToTarget) GetFloat(sim *Simulation) float64 {
+	return value.unit.DistanceFromTarget
+}
+func (value *APLValueDistanceToTarget) String() string {
+	return "Distance to Target"
+}

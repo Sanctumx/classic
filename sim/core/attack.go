@@ -1031,6 +1031,29 @@ func (aa *AutoAttacks) PPMProc(sim *Simulation, ppm float64, procMask ProcMask, 
 	return false
 }
 
+func (aa *AutoAttacks) ForceMeleeSwing(sim *Simulation) {
+	if aa.mh.spell == nil || !aa.AutoSwingMelee {
+		return
+	}
+	// Entering melee must not reset a 3.8s timer that still has time left.
+	if aa.mh.swingAt > sim.CurrentTime {
+		return
+	}
+	aa.mh.swingAt = sim.CurrentTime
+	sim.rescheduleWeaponAttack(aa.mh.swingAt)
+}
+
+func (aa *AutoAttacks) ForceRangedSwing(sim *Simulation) {
+	if aa.ranged.spell == nil || !aa.AutoSwingRanged {
+		return
+	}
+	if aa.ranged.swingAt <= sim.CurrentTime {
+		return
+	}
+	aa.ranged.swingAt = sim.CurrentTime
+	sim.rescheduleWeaponAttack(aa.ranged.swingAt)
+}
+
 func (unit *Unit) applyParryHaste() {
 	if !unit.PseudoStats.ParryHaste || !unit.AutoAttacks.AutoSwingMelee {
 		return

@@ -1,10 +1,10 @@
 package hunter
 
 import (
-	"time"
-
 	"github.com/wowsims/classic/sim/core"
+	"github.com/wowsims/classic/sim/core/proto"
 	"github.com/wowsims/classic/sim/core/stats"
+	"time"
 )
 
 // false = old behavior: keep the stronger bleed and restart the timer.
@@ -147,9 +147,12 @@ func (hunter *Hunter) applyLaceratingStrikes() {
 		return
 	}
 
+	bank := make([]float64, len(hunter.Env.AllUnits))
+
 	hunter.LaceratingBleed = hunter.RegisterSpell(core.SpellConfig{
 		ActionID:         core.ActionID{SpellID: 1310533},
 		SpellSchool:      core.SpellSchoolPhysical,
+		DefenseType:      core.DefenseTypeMelee,
 		ProcMask:         core.ProcMaskEmpty,
 		Flags:            core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell,
 		DamageMultiplier: 1,
@@ -158,19 +161,38 @@ func (hunter *Hunter) applyLaceratingStrikes() {
 			Aura: core.Aura{
 				Label:    "Lacerating Strikes",
 				ActionID: core.ActionID{SpellID: 1310533},
+				OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+					bank[aura.Unit.UnitIndex] = 0
+				},
 			},
 			NumberOfTicks: 7,
 			TickLength:    time.Second * 3,
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				at := dot.Spell.Unit.AttackTables[target.UnitIndex][proto.CastType_CastTypeMainHand]
+				dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(at)
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTickPhysicalCrit)
+				bank[target.UnitIndex] -= dot.SnapshotBaseDamage
+				if bank[target.UnitIndex] < 0 {
+					bank[target.UnitIndex] = 0
+				}
 			},
 		},
 	})
+
+	if hunter.Talents.SavageStrikes > 0 {
+		hunter.LaceratingBleed.BonusCritRating += 2 * float64(hunter.Talents.SavageStrikes) * core.CritRatingPerCritChance
+	}
+	if hunter.Talents.PredatorsEdge > 0 {
+		hunter.LaceratingBleed.CritDamageBonus += 0.06 * float64(hunter.Talents.PredatorsEdge)
+	}
 
 	hunter.RegisterAura(core.Aura{
 		Label:    "Lacerating Strikes Talent",
 		Duration: core.NeverExpires,
 		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			for i := range bank {
+				bank[i] = 0
+			}
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
@@ -178,20 +200,24 @@ func (hunter *Hunter) applyLaceratingStrikes() {
 				return
 			}
 			dot := hunter.LaceratingBleed.Dot(result.Target)
-			newTick := result.Damage * 0.40 / 7
+			idx := result.Target.UnitIndex
+			total := result.Damage*0.40 + bank[idx]
+			dot.SnapshotBaseDamage = total / 7
+			dot.SnapshotAttackerMultiplier = 1
+			at := hunter.AttackTables[result.Target.UnitIndex][proto.CastType_CastTypeMainHand]
+			dot.SnapshotCritChance = hunter.LaceratingBleed.PhysicalCritChance(at)
+			bank[idx] = total
 
 			if !dot.IsActive() {
-				dot.SnapshotBaseDamage = newTick
-				dot.SnapshotAttackerMultiplier = 1
 				dot.Apply(sim)
 				return
 			}
 
 			nextTick := dot.NextTickAt()
-			remaining := dot.SnapshotBaseDamage * float64(dot.NumTicksRemaining(sim))
-			dot.SnapshotBaseDamage = newTick + remaining/7
-			dot.SnapshotAttackerMultiplier = 1
-			dot.ApplyOrRefresh(sim)
+			dot.TickCount = 0
+			dot.NumberOfTicks = 7
+			dot.RecomputeAuraDuration()
+			dot.Aura.Refresh(sim)
 			if pa := dot.TickAction(); pa != nil {
 				pa.NextActionAt = nextTick
 			}

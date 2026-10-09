@@ -102,6 +102,7 @@ message APLValue {
         APLValueRemainingTimePercent remaining_time_percent = 10;
         APLValueIsExecutePhase is_execute_phase = 41;
         APLValueNumberTargets number_targets = 28;
+        APLValueDistanceToTarget distance_to_target = 78;
 
         // Resource values
         APLValueCurrentHealth current_health = 26;
@@ -363,6 +364,7 @@ message APLValueCurrentTimePercent {}
 message APLValueRemainingTime {}
 message APLValueRemainingTimePercent {}
 message APLValueNumberTargets {}
+message APLValueDistanceToTarget {}
 message APLValueIsExecutePhase {
     enum ExecutePhaseThreshold {
         Unknown = 0;

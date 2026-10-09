@@ -56,7 +56,7 @@ func (hunter *Hunter) registerMongooseBiteSpell() {
 	hunter.DefensiveState = hunter.RegisterAura(core.Aura{
 		Label:    "Defensive State",
 		ActionID: core.ActionID{SpellID: 5302},
-		Duration: time.Second * 5,
+		Duration: time.Second * 10,
 	})
 
 	core.MakePermanent(hunter.RegisterAura(core.Aura{

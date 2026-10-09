@@ -64,7 +64,7 @@ func (move *MovementHandler) removeMoveSpeedModifier(moveHeap *MoveHeap, actionI
 }
 
 func (move *MovementHandler) updateMoveSpeed() {
-	move.MoveSpeed = move.baseSpeed * move.getActveModifier(move.moveSpeedBonuses) * (1-move.getActveModifier(move.moveSpeedPenalties))
+	move.MoveSpeed = move.baseSpeed * move.getActveModifier(move.moveSpeedBonuses) * (1 - move.getActveModifier(move.moveSpeedPenalties))
 }
 
 func (move *MovementHandler) getActveModifier(moveHeap *MoveHeap) float64 {
@@ -152,8 +152,13 @@ func (unit *Unit) MoveTo(moveRange float64, sim *Simulation) {
 		TickImmediately: false,
 
 		OnAction: func(sim *Simulation) {
+			wasInMelee := unit.DistanceFromTarget <= 5
 			unit.DistanceFromTarget += moveInterval
 			unit.MovementHandler.moveAura.SetStacks(sim, int32(unit.DistanceFromTarget))
+
+			if !wasInMelee && unit.DistanceFromTarget <= 5 {
+				unit.AutoAttacks.ForceMeleeSwing(sim)
+			}
 
 			if unit.DistanceFromTarget == moveRange {
 				unit.MovementHandler.moveAura.Deactivate(sim)
@@ -168,12 +173,12 @@ func (unit *Unit) AddMoveSpeedModifier(actionId *ActionID, modifier float64) {
 		ActionId: actionId,
 		Modifier: modifier,
 	}
-	if(moveSpeedMod.Modifier < 1) {
+	if moveSpeedMod.Modifier < 1 {
 		unit.MovementHandler.addMoveSpeedModifier(unit.MovementHandler.moveSpeedPenalties, moveSpeedMod)
 	} else {
 		unit.MovementHandler.addMoveSpeedModifier(unit.MovementHandler.moveSpeedBonuses, moveSpeedMod)
 	}
-	
+
 }
 
 func (unit *Unit) RemoveMoveSpeedModifier(actionID *ActionID) {

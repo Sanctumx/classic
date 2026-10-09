@@ -18,8 +18,8 @@ func (hunter *Hunter) getImmolationTrapConfig(rank int, timer *core.Timer) core.
 		SpellCode:     SpellCode_HunterImmolationTrap,
 		ActionID:      core.ActionID{SpellID: spellId},
 		SpellSchool:   core.SpellSchoolFire,
-		DefenseType:   core.DefenseTypeMagic,
-		ProcMask:      core.ProcMaskSpellDamage,
+		DefenseType:   core.DefenseTypeMelee,
+		ProcMask:      core.ProcMaskMeleeMHSpecial,
 		Flags:         core.SpellFlagAPL | core.SpellFlagPassiveSpell | SpellFlagTrap,
 		Rank:          rank,
 		RequiredLevel: level,
@@ -53,9 +53,10 @@ func (hunter *Hunter) getImmolationTrapConfig(rank int, timer *core.Timer) core.
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, isRollover bool) {
 				tickDamage := dotDamage / float64(dot.NumberOfTicks)
 				dot.Snapshot(target, tickDamage, isRollover)
+				dot.SnapshotCritChance = dot.Spell.SpellCritChance(target)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTickPhysicalCrit)
 			},
 		},
 

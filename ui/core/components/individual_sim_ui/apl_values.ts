@@ -46,6 +46,7 @@ import {
 	APLValueMin,
 	APLValueNot,
 	APLValueNumberTargets,
+	APLValueDistanceToTarget,
 	APLValueOr,
 	APLValueRemainingTime,
 	APLValueRemainingTimePercent,
@@ -590,6 +591,13 @@ const valueKindFactories: { [f in NonNullable<APLValueKind>]: ValueKindConfig<AP
 		shortDescription: 'Count of targets in the current encounter',
 		newValue: APLValueNumberTargets.create,
 		fields: [],
+	}),
+	distanceToTarget: inputBuilder({
+	label: 'Distance to Target',
+	submenu: ['Encounter'],
+	shortDescription: 'Current distance to the target, in yards',
+	newValue: APLValueDistanceToTarget.create,
+	fields: [],
 	}),
 	frontOfTarget: inputBuilder({
 		label: 'Front of Target',
