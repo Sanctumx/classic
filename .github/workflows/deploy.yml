@@ -27,6 +27,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
       - run: make dist/classic/.dirstamp
+      - run: cp tools/lib.wasm.good dist/classic/lib.wasm
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/classic
