@@ -52,6 +52,13 @@ func (hunter *Hunter) registerSummonHawkSpell(sharedTimer *core.Timer) {
 		},
 	})
 
+	hawkAura := hunter.RegisterAura(core.Aura{
+		Label:     "Summon Hawk",
+		ActionID:  core.ActionID{SpellID: 1293241}.WithTag(2),
+		Duration:  core.NeverExpires,
+		MaxStacks: 2,
+	})
+
 	hunter.SummonHawk = hunter.GetOrRegisterSpell(core.SpellConfig{
 		ActionID:     core.ActionID{SpellID: 1293241},
 		SpellSchool:  core.SpellSchoolPhysical,
@@ -66,7 +73,7 @@ func (hunter *Hunter) registerSummonHawkSpell(sharedTimer *core.Timer) {
 			DefaultCast: core.Cast{GCD: core.GCDDefault},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
-				Timer:    sharedTimer,
+				Timer:    hunter.NewTimer(),
 				Duration: time.Second * 6,
 			},
 		},
@@ -88,6 +95,10 @@ func (hunter *Hunter) registerSummonHawkSpell(sharedTimer *core.Timer) {
 				}
 				slot := i
 				expireAt[slot] = sim.CurrentTime + 18*time.Second
+				if !hawkAura.IsActive() {
+					hawkAura.Activate(sim)
+				}
+				hawkAura.AddStack(sim)
 
 				var pa *core.PendingAction
 				pa = &core.PendingAction{
@@ -96,6 +107,10 @@ func (hunter *Hunter) registerSummonHawkSpell(sharedTimer *core.Timer) {
 					OnAction: func(sim *core.Simulation) {
 						if sim.CurrentTime > expireAt[slot] || swingTarget == nil {
 							expireAt[slot] = 0
+							hawkAura.RemoveStack(sim)
+							if hawkAura.GetStacks() == 0 {
+								hawkAura.Deactivate(sim)
+							}
 							return
 						}
 						hawkSwing.Cast(sim, swingTarget)
