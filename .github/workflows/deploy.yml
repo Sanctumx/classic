@@ -21,6 +21,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: "25.x"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
       - run: make dist/classic/.dirstamp
       - uses: actions/upload-pages-artifact@v3
         with:
